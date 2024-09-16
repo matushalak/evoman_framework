@@ -69,6 +69,7 @@ np.random.seed(420)
 
 # runs simulation
 def simulation(env,x):
+    # vfitness, vplayerlife, venemylife, vtime
     f,p,e,t = env.play(pcont=x)
     return f
 

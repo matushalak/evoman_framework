@@ -17,6 +17,7 @@ import os
 
 # runs simulation
 def simulation(env,x):
+    # vfitness, vplayerlife, venemylife, vtime
     f,p,e,t = env.play(pcont=x)
     return f
 
