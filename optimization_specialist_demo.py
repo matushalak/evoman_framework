@@ -239,6 +239,7 @@ for i in range(ini_g+1, gens):
     fit_pop_cp = fit_pop
     fit_pop_norm =  np.array(list(map(lambda y: norm(y,fit_pop_cp), fit_pop))) # avoiding negative probabilities, as fitness is ranges from negative numbers
     probs = (fit_pop_norm)/(fit_pop_norm).sum()
+    # choose indices of elements proportional to their fitness
     chosen = np.random.choice(pop.shape[0], npop , p=probs, replace=False)
     chosen = np.append(chosen[1:],best)
     pop = pop[chosen]
