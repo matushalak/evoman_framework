@@ -88,24 +88,47 @@ def main():
         basic_ea(popsize, mg, mr, cr, n_hidden, experiment_name,
                  env, new_evolution=False)
 
-# runs game (evaluate fitness for 1 individual)
+# # runs game (evaluate fitness for 1 individual)
 def run_game(env:Environment,individual):
     '''Runs game and returns individual solution's fitness'''
     # vfitness, vplayerlife, venemylife, vtime
+    if isinstance(individual, list) == False:
+        breakpoint()
     fitness ,p,e,t = env.play(pcont=individual)
     return fitness
 
-# evaluation
+# # evaluation
 def evaluate_fitnesses(env:Environment, population):
     ''' Evaluates fitness of each individual in the population of solutions
     parallelized for efficiency'''
     # unparallelized version
     # here map is more efficient than list comprehension when we repeatedly call same function
-    # return np.array(list(map(lambda y: run_game(env,y), population)))
+    return list(map(lambda y: run_game(env,y), population))
 
-    # parallelized (taken from my N-Queens solution file)
-    fitnesses = Parallel(n_jobs=-1)(delayed(run_game)(env, ind) for ind in population)
-    return fitnesses
+#     # parallelized (taken from my N-Queens solution file)
+#     fitnesses = Parallel(n_jobs=-1)(delayed(run_game)(env, ind) for ind in population)
+#     return fitnesses
+
+# def evaluate_fitnesses(e,population):
+#     ''' Evaluates fitness of each individual in the population of solutions
+#     parallelized for efficiency'''
+#     # Instead of passing the full environment, pass only the configuration or parameters needed to reinitialize it
+#     fitnesses = Parallel(n_jobs=-1)(
+#         delayed(run_game_in_worker)(ind) for ind in population
+#     )
+#     return fitnesses
+
+# def run_game_in_worker(ind):
+#     # Recreate or reinitialize the environment from env_config inside the worker
+#     env = Environment(experiment_name='basic_helloworld',
+#                     enemies=[2],
+#                     playermode="ai",
+#                     player_controller=player_controller(10), # you  can insert your own controller here
+#                     enemymode="static",
+#                     level=2,
+#                     speed="fastest",
+#                     visuals=False)
+#     return run_game(env, ind)
 
 # check and apply limits on genes (of offspring - after mutation / recombination)
 def within_genetic_code(gene, gene_limits:list[float, float]):
@@ -183,7 +206,7 @@ def parent_selection(population, fitnesses, env:Environment, n_children = 2):
         for _ in range(n_children):
             parent = tournament_selection(population, fitnesses)
             g_parents.append(parent)
-    # parallelized fitness evaluation
+    # (parallelized) fitness evaluation
     f_parents = evaluate_fitnesses(env, g_parents)
     return g_parents, f_parents
 
@@ -237,7 +260,7 @@ def blend_recombination(p1: list[float], p2: list[float], alpha: float = 0.5) ->
     return ch1, ch2
 
 def crossover (all_parents, p_crossover, 
-               recombination_operator:function) -> list:
+               recombination_operator:callable) -> list:
     ''''Perform whatever kind of recombination and produce all offspring'''
     offspring = []
     # Make sure all parents mixed 
@@ -265,10 +288,18 @@ def uncorrelated_mut_one_sigma(individual, sigma, mutation_rate):
     if np.random.uniform() > mutation_rate:
         return individual
     tau = 1/np.sqrt(len(individual))
-    individual_mutated = [xi + (sigma * np.exp(np.random.normal(0,tau))) * np.random.standard_normal()
-                          for xi in individual]
-
-    return individual_mutated, (sigma * np.exp(np.random.normal(0,tau)))
+    sigma_prime = sigma * np.exp(np.random.normal(0,tau))
+    individual_mutated = []
+    for xi in individual:
+        xi_prime = xi + sigma_prime * np.random.standard_normal()
+        # make sure that within genetic code
+        corrected_xi = within_genetic_code(xi_prime, [-1.0,1.0])
+        individual_mutated.append(corrected_xi)
+    
+    if isinstance(individual_mutated, float) == True:
+        breakpoint
+    individual_mutated.append(sigma_prime)
+    return individual_mutated
 
 def basic_ea (popsize:int, max_gen:int, mr:float, cr:float, n_hidden_neurons:int,
               experiment_name:str, env:Environment, new_evolution:bool = True):
@@ -314,12 +345,12 @@ def basic_ea (popsize:int, max_gen:int, mr:float, cr:float, n_hidden_neurons:int
     # Loading previous experiment data
     else:
         env.load_state()
-        pop = env.solutions[0]
-        fit_pop = env.solutions[1]
+        population = env.solutions[0]
+        fitnesses = env.solutions[1]
 
-        best_idx = np.argmax(fit_pop)
-        mean_fitness = np.mean(fit_pop)
-        std_fitness = np.std(fit_pop)
+        best_idx = np.argmax(fitnesses)
+        mean_fitness = np.mean(fitnesses)
+        std_fitness = np.std(fitnesses)
 
         # get sigma_prime, mutation_r & crossover_r
         results = read_csv(experiment_name + '/results.txt', sep=' ', 
@@ -331,7 +362,6 @@ def basic_ea (popsize:int, max_gen:int, mr:float, cr:float, n_hidden_neurons:int
         file_aux  = open(experiment_name+'/gen.txt','r')
         ini_g = int(file_aux.readline())
         file_aux.close()
-
 
     # evolution loop
     for i in range(max_gen):
@@ -346,9 +376,15 @@ def basic_ea (popsize:int, max_gen:int, mr:float, cr:float, n_hidden_neurons:int
         # crossover / recombination: Whole Arithmetic (basic) | Blend Recombination (best)
         offspring = crossover(parents, cr, blend_recombination)
         # mutation: Uncorrelated mutation with N step sizes
-        offspring_mutated, sigma_prime = [uncorrelated_mut_one_sigma(ind, sigma_prime, mr)
-                                          for ind in offspring]
+        mutated_tuples = [uncorrelated_mut_one_sigma(ind, sigma_prime, mr) for ind in offspring]
+        offspring_mutated, sigma_primes = [], []
+        for mut_tuple in mutated_tuples:
+            offspring_mutated.append(mut_tuple[:-1])
+            sigma_primes.append(mut_tuple[-1])
+        breakpoint()
         offspring_fitnesses = evaluate_fitnesses(env, offspring_mutated)
+        
+        sigma_prime = sigma_primes[np.argmax(offspring_fitnesses)]
 
         # Survivor selection with elitism & some randomness
         population, fitnesses = survivor_selection(parents, parent_fitnesses, 
@@ -395,17 +431,17 @@ def basic_ea (popsize:int, max_gen:int, mr:float, cr:float, n_hidden_neurons:int
         file_aux.write('\n'+str(ini_g)+' '+str(round(best_fitness,6))+' '+str(round(mean_fitness,6))+' '+str(round(std_fitness,6))+' '+str(round(sigma_prime, 6))+' '+str(round(mr, 6))+' '+str(round(cr, 6)))
         file_aux.close()
 
-
+        breakpoint()
         # saves generation number
-        file_aux  = open(experiment_name+'/gen.txt','w')
+        file_aux  = open(experiment_name+'/gen.txt','a')
         file_aux.write(str(i))
         file_aux.close()
 
         # saves file with the best solution
-        np.savetxt(experiment_name+'/best.txt',best_individual)
+        np.savetxt(experiment_name+'/best.txt',str(best_individual))
 
         # saves simulation state
-        solutions = [pop, fit_pop]
+        solutions = [population, fitnesses]
         env.update_solutions(solutions)
         env.save_state()
 

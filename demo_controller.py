@@ -20,12 +20,20 @@ class player_controller(Controller):
 		self.n_hidden = [_n_hidden]
 
 	def set(self,controller, n_inputs):
+		controller = np.array(controller)
+		expected_size = (n_inputs + 1) * self.n_hidden[0] + (self.n_hidden[0] + 1) * 5
+		if controller.size != expected_size:
+			breakpoint()
+			raise ValueError(f"Controller size mismatch! Expected {expected_size}, but got {controller.size}")
+		
+		
 		# Number of hidden neurons
 		if self.n_hidden[0] > 0:
 			# Preparing the weights and biases from the controller of layer 1
 			# Input -> Hidden (fully connected)
 			# Biases for the n hidden neurons
 			self.bias1 = controller[:self.n_hidden[0]].reshape(1, self.n_hidden[0])
+
 			# Weights for the connections from the inputs to the hidden nodes
 			# inputs * self.n_hidden = input fully connected to hidden
 			# + self.n_hidden = first n_hidden indices used for bias
@@ -44,6 +52,7 @@ class player_controller(Controller):
 
 	# CAN OVERWRITE THIS (eg. if we want to IMPLEMENT NEAT)
 	def control(self, inputs, controller):
+		controller = np.array(controller)
 		# Normalises the input [0,1] using min-max scaling
 		inputs = (inputs-min(inputs))/float((max(inputs)-min(inputs)))
 
