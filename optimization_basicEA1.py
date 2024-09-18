@@ -73,10 +73,10 @@ def evaluate_fitnesses(env:Environment, population):
 
     # parallelized (taken from my N-Queens solution file)
     fitnesses = Parallel(n_jobs=-1)(delayed(run_game)(env, ind) for ind in population)
-    return np.array(fitnesses)
+    return fitnesses
 
 # check and apply limits on genes (of offspring - after mutation / recombination)
-def within_genetic_code(gene, gene_limits:list[float, float])
+def within_genetic_code(gene, gene_limits:list[float, float]):
     ''' Function that verifies whether a given gene in an individual 
     is within the specified gene limits'''
     if gene <= gene_limits[0]:
@@ -92,7 +92,7 @@ def initialize_population(popsize, individual_dims, gene_limits:list[float, floa
         N = popsize solutions, each solution containing
         N = individual_dims genes, each gene within <gene_limits>'''
     population = np.random.uniform(*gene_limits, (popsize, individual_dims))
-    return population
+    return population.tolist()
 
 # useful for probabilistic selection, for tournament doesnt matter
 def normalize_fitness (one_fitness, all_fitnesses):
@@ -134,15 +134,93 @@ def fitness_sharing(fitnesses: list[float], population: list[list],
     return shared_fitnesses
 
 # Tournament selection
-def tournament_selection(population, fitnesses, k: int = 8) -> list:
-    """Tournament selection using tournament size = k."""
+def tournament_selection(population, fitnesses, k: int = 15) -> list:
+    """Tournament selection using tournament size = k.
+            Gives 1 WINNER of TOURNAMENT"""
     players = np.random.choice(np.arange(len(population)), size=k)
     best_individual_idx = max(players, key=lambda i: fitnesses[i])
     return population[best_individual_idx]
 
+# Parent selection
+def parent_selection(population, fitnesses, env:Environment, n_children = 2):
+    '''Tournament-based parent selection (for now)'''    
+    n_parents = int(len(population) / n_children)
+    # genotypes of parents, fitnesses of those genotypes
+    g_parents = []
+    for _ in range(n_parents):
+        for _ in range(n_children):
+            parent = tournament_selection(population, fitnesses)
+            g_parents.append(parent)
+    # parallelized fitness evaluation
+    f_parents = evaluate_fitnesses(env, g_parents)
+    return g_parents, f_parents
+
+# Survivor selection with elitism and random diversity preservation
+def survivor_selection(parents, parent_fitnesses, 
+                       offspring, offspring_fitnesses, elite_fraction=0.5):
+    """Select survivors using elitism with some randomness to maintain diversity."""
+    # Combine parents and offspring
+    total_population = parents + offspring
+    total_fitnesses = parent_fitnesses + offspring_fitnesses
+    # Sort by fitness in descending order
+    sorted_individuals = sorted(zip(total_fitnesses, total_population), key=lambda x: x[0], reverse=True)
+    
+    # Select elites (the top portion of the population)
+    num_elites = int(elite_fraction * len(parents))  # Determine number of elites to preserve
+    elites = sorted_individuals[:num_elites]
+    # Select the remaining individuals randomly from the rest to maintain diversity
+    remaining_individuals = sorted_individuals[num_elites:]
+    np.random.shuffle(remaining_individuals)  # Shuffle to add randomness
+    # Select the remaining individuals to fill the population
+    num_remaining = len(parents) - num_elites
+    selected_remaining = remaining_individuals[:num_remaining]
+    
+    # Combine elites and randomly selected individuals
+    survivors = elites + selected_remaining
+    # Separate fitnesses and individuals for the return
+    return [ind for _, ind in survivors], [fit for fit, _ in survivors]
+
+def whole_arithmetic_recombination(p1:list, p2:list, weight:float)->list[list,list]:
+    ''''Apply whole arithmetic recombination to create offspring
+    --> potentially switch to this once close to solution'''
+    ch1 = [weight*x + (1-weight)*y for x,y in zip(p1,p2)]
+    ch2 = [weight*y + (1-weight)*x for x,y in zip(p1,p2)]
+    return ch1, ch2
+
+def blend_recombination(p1: list[float], p2: list[float], alpha: float = 0.5) -> list[list[float], list[float]]:
+    '''Apply blend recombination (BLX-alpha) to create two offspring.
+    --> really explorative'''
+    ch1 = []
+    ch2 = []
+    for gene1, gene2 in zip(p1, p2):
+        # Calculate the min and max for the blending range
+        lower_bound = min(gene1, gene2) - alpha * abs(gene1 - gene2)
+        upper_bound = max(gene1, gene2) + alpha * abs(gene1 - gene2)
+        
+        # Generate two offspring by sampling from the range [lower_bound, upper_bound]
+        # highly explorative character
+        ch1.append(np.random.uniform(lower_bound, upper_bound))
+        ch2.append(np.random.uniform(lower_bound, upper_bound))
+    
+    return ch1, ch2
+
+def uncorrelated_mut_one_sigma(individual, sigma, mutation_rate):
+    ''' 
+    Apply uncorrelated mutation with one step size
+    tau = 1/sqrt(n), n = problem size
+	SD' = SD * e**(N(0,tau))
+    x'i = xi + SD' * N(0,1) 
+    '''
+    if np.random.uniform() > mutation_rate:
+        return individual
+    tau = 1/np.sqrt(len(individual))
+    individual_mutated = [xi + (sigma * np.exp(np.random.normal(0,tau))) * np.random.standard_normal()
+                          for xi in individual]
+
+    return individual_mutated
 
 def basic_ea (popsize:int, max_gen:int, mr:float, cr:float, n_hidden_neurons:int,
-              experiment_name:str):
+              experiment_name:str, new_evolution:bool = False):
     ''' Basic evolutionary algorithm to optimize the weights '''
     # initializes simulation in individual evolution mode, for single static enemy.
     env = Environment(experiment_name=experiment_name,
@@ -183,12 +261,16 @@ def basic_ea (popsize:int, max_gen:int, mr:float, cr:float, n_hidden_neurons:int
         # ?? speciation ??
 
         # Parent selection: (Tournament? - just first try) Probability based - YES
-        
-    # recombination: Arithmetic (basic), Blend Recombination (best)
+        parents, parent_fitnesses = parent_selection(population, shared_fitnesses, env)
+    
+        # crossover
+        # recombination: Whole Arithmetic (basic), Blend Recombination (best)
+    
+        # mutation: Uncorrelated mutation with N step sizes
 
-    # mutation: Uncorrelated mutation with N step sizes
+        # Survivor selection with elitism
+        population, fitnesses = survivor_selection(parents, parent_fitnesses, offspring, offspring_fitnesses)
 
-    # survivor selection: Tournament: n = 10
     
     # OUTPUT: weights + biases vector
     # saves results
