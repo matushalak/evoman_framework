@@ -100,38 +100,29 @@ def run_game(env:Environment,individual, test=False):
         return fitness
     else:
         return fitness ,p,e,t
-# # evaluation
-def evaluate_fitnesses(env:Environment, population):
+
+def evaluate_fitnesses(env, population):
     ''' Evaluates fitness of each individual in the population of solutions
     parallelized for efficiency'''
-    # unparallelized version
-    # here map is more efficient than list comprehension when we repeatedly call same function
-    return list(map(lambda y: run_game(env,y), population))
+    # Instead of passing the full environment, pass only the configuration or parameters needed to reinitialize it
+    name  = env.experiment_name
+    contr = env.player_controller
+    fitnesses = Parallel(n_jobs=-1)(
+        delayed(run_game_in_worker)(name, contr, ind) for ind in population
+    )
+    return fitnesses
 
-#     # parallelized (taken from my N-Queens solution file)
-#     fitnesses = Parallel(n_jobs=-1)(delayed(run_game)(env, ind) for ind in population)
-#     return fitnesses
-
-# def evaluate_fitnesses(e,population):
-#     ''' Evaluates fitness of each individual in the population of solutions
-#     parallelized for efficiency'''
-#     # Instead of passing the full environment, pass only the configuration or parameters needed to reinitialize it
-#     fitnesses = Parallel(n_jobs=-1)(
-#         delayed(run_game_in_worker)(ind) for ind in population
-#     )
-#     return fitnesses
-
-# def run_game_in_worker(ind):
-#     # Recreate or reinitialize the environment from env_config inside the worker
-#     env = Environment(experiment_name='basic_helloworld',
-#                     enemies=[2],
-#                     playermode="ai",
-#                     player_controller=player_controller(10), # you  can insert your own controller here
-#                     enemymode="static",
-#                     level=2,
-#                     speed="fastest",
-#                     visuals=False)
-#     return run_game(env, ind)
+def run_game_in_worker(name, contr, ind):
+    # Recreate or reinitialize the environment from env_config inside the worker
+    env = Environment(experiment_name=name,
+                    enemies=[2],
+                    playermode="ai",
+                    player_controller=contr, # you  can insert your own controller here
+                    enemymode="static",
+                    level=2,
+                    speed="fastest",
+                    visuals=False)
+    return run_game(env, ind)
 
 # check and apply limits on genes (of offspring - after mutation / recombination)
 def within_genetic_code(gene, gene_limits:list[float, float]):
@@ -422,9 +413,9 @@ def basic_ea (popsize:int, max_gen:int, mr:float, cr:float, n_hidden_neurons:int
         # saves results
         file_aux  = open(experiment_name+'/results.txt','a')
         file_aux.write('\n\ngen best mean std sigma_prime mutation_r crossover_r')
-        print( '\n GENERATION '+str(ini_g)+' '+str(round(best_fitness,6))+' '+str(round(mean_fitness,6))+' '+str(round(std_fitness,6))+' '
+        print( '\n GENERATION '+str(i)+' '+str(round(best_fitness,6))+' '+str(round(mean_fitness,6))+' '+str(round(std_fitness,6))+' '
               +str(round(sigma_prime, 6))+' '+str(round(mr, 6))+' '+str(round(cr, 6)))
-        file_aux.write('\n'+str(ini_g)+' '+str(round(best_fitness,6))+' '+str(round(mean_fitness,6))+' '+str(round(std_fitness,6))+' '+str(round(sigma_prime, 6))+' '+str(round(mr, 6))+' '+str(round(cr, 6)))
+        file_aux.write('\n'+str(i)+' '+str(round(best_fitness,6))+' '+str(round(mean_fitness,6))+' '+str(round(std_fitness,6))+' '+str(round(sigma_prime, 6))+' '+str(round(mr, 6))+' '+str(round(cr, 6)))
         file_aux.close()
 
         # saves generation number
