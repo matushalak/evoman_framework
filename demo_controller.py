@@ -26,7 +26,6 @@ class player_controller(Controller):
 			breakpoint()
 			raise ValueError(f"Controller size mismatch! Expected {expected_size}, but got {controller.size}")
 		
-		
 		# Number of hidden neurons
 		if self.n_hidden[0] > 0:
 			# Preparing the weights and biases from the controller of layer 1

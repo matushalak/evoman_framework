@@ -23,7 +23,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Optimize weights of Controller NN using EA")
 
     # Define arguments
-    parser.add_argument('-name', '--exp_name', type=int, required=False, help="Experiment name")
+    parser.add_argument('-name', '--exp_name', type=str, required=False, help="Experiment name")
     parser.add_argument('-p', '--popsize', type=int, required=False, default = 100, help="Population size (eg. 100)")
     parser.add_argument('-mg', '--maxgen', type=int, required=False, default = 500, help="Max generations (eg. 500)")
     parser.add_argument('-cr', '--crossover_rate', type=float, required=False, default = 0.5, help="Crossover rate (e.g., 0.8)")
@@ -37,7 +37,7 @@ def main():
     '''Main function for basic EA, runs the EA which saves results'''
     # command line arguments for experiment parameters
     args = parse_args()
-    if isinstance(args.exp_name, int):
+    if isinstance(args.exp_name, str):
         experiment_name = 'basic_' + args.exp_name
     else:
         experiment_name = 'basic_' + input("Enter Experiment (directory) Name:")
@@ -73,8 +73,9 @@ def main():
         best_solution = np.loadtxt(experiment_name+'/best.txt')
         print( '\n RUNNING SAVED BEST SOLUTION \n')
         env.update_parameter('speed','normal')
-        evaluate_fitnesses(env, [best_solution])
-
+        vfitness, vplayerlife, venemylife, vtime = run_game(env, best_solution, test = True)
+        print('vfitness, vplayerlife, venemylife, vtime:\n',
+              vfitness, vplayerlife, venemylife, vtime)
         sys.exit(0)
 
     if not os.path.exists(experiment_name+'/evoman_solstate'):
@@ -89,14 +90,16 @@ def main():
                  env, new_evolution=False)
 
 # # runs game (evaluate fitness for 1 individual)
-def run_game(env:Environment,individual):
+def run_game(env:Environment,individual, test=False):
     '''Runs game and returns individual solution's fitness'''
     # vfitness, vplayerlife, venemylife, vtime
-    if isinstance(individual, list) == False:
+    if isinstance(individual, float):
         breakpoint()
     fitness ,p,e,t = env.play(pcont=individual)
-    return fitness
-
+    if test == False:
+        return fitness
+    else:
+        return fitness ,p,e,t
 # # evaluation
 def evaluate_fitnesses(env:Environment, population):
     ''' Evaluates fitness of each individual in the population of solutions
@@ -285,21 +288,19 @@ def uncorrelated_mut_one_sigma(individual, sigma, mutation_rate):
 	SD' = SD * e**(N(0,tau))
     x'i = xi + SD' * N(0,1) 
     '''
-    if np.random.uniform() > mutation_rate:
-        return individual
     tau = 1/np.sqrt(len(individual))
     sigma_prime = sigma * np.exp(np.random.normal(0,tau))
     individual_mutated = []
     for xi in individual:
-        xi_prime = xi + sigma_prime * np.random.standard_normal()
-        # make sure that within genetic code
-        corrected_xi = within_genetic_code(xi_prime, [-1.0,1.0])
-        individual_mutated.append(corrected_xi)
-    
-    if isinstance(individual_mutated, float) == True:
-        breakpoint
-    individual_mutated.append(sigma_prime)
-    return individual_mutated
+        if np.random.uniform() > mutation_rate:
+            individual_mutated.append(xi)
+        else:
+            xi_prime = xi + sigma_prime * np.random.standard_normal()
+            # make sure that within genetic code
+            corrected_xi = within_genetic_code(xi_prime, [-1.0,1.0])
+            individual_mutated.append(corrected_xi)
+        
+    return individual_mutated, sigma_prime
 
 def basic_ea (popsize:int, max_gen:int, mr:float, cr:float, n_hidden_neurons:int,
               experiment_name:str, env:Environment, new_evolution:bool = True):
@@ -375,20 +376,15 @@ def basic_ea (popsize:int, max_gen:int, mr:float, cr:float, n_hidden_neurons:int
 
         # crossover / recombination: Whole Arithmetic (basic) | Blend Recombination (best)
         offspring = crossover(parents, cr, blend_recombination)
-        # mutation: Uncorrelated mutation with N step sizes
-        mutated_tuples = [uncorrelated_mut_one_sigma(ind, sigma_prime, mr) for ind in offspring]
-        offspring_mutated, sigma_primes = [], []
-        for mut_tuple in mutated_tuples:
-            offspring_mutated.append(mut_tuple[:-1])
-            sigma_primes.append(mut_tuple[-1])
-        breakpoint()
-        offspring_fitnesses = evaluate_fitnesses(env, offspring_mutated)
         
+        # mutation: Uncorrelated mutation with N step sizes
+        offspring_mutated, sigma_primes = zip(*[uncorrelated_mut_one_sigma(ind, sigma_prime, mr) for ind in offspring])
+        offspring_fitnesses = evaluate_fitnesses(env, offspring_mutated)
         sigma_prime = sigma_primes[np.argmax(offspring_fitnesses)]
 
         # Survivor selection with elitism & some randomness
         population, fitnesses = survivor_selection(parents, parent_fitnesses, 
-                                                   offspring_mutated, offspring_fitnesses)
+                                                   list(offspring_mutated), offspring_fitnesses)
 
         # Check for best solution
         best_idx = np.argmax(fitnesses)
@@ -431,14 +427,13 @@ def basic_ea (popsize:int, max_gen:int, mr:float, cr:float, n_hidden_neurons:int
         file_aux.write('\n'+str(ini_g)+' '+str(round(best_fitness,6))+' '+str(round(mean_fitness,6))+' '+str(round(std_fitness,6))+' '+str(round(sigma_prime, 6))+' '+str(round(mr, 6))+' '+str(round(cr, 6)))
         file_aux.close()
 
-        breakpoint()
         # saves generation number
         file_aux  = open(experiment_name+'/gen.txt','a')
         file_aux.write(str(i))
         file_aux.close()
 
         # saves file with the best solution
-        np.savetxt(experiment_name+'/best.txt',str(best_individual))
+        np.savetxt(experiment_name+'/best.txt',best_individual)
 
         # saves simulation state
         solutions = [population, fitnesses]
