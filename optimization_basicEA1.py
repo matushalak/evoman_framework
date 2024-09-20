@@ -428,7 +428,7 @@ def basic_ea (popsize:int, max_gen:int, mr:float, cr:float, n_hidden_neurons:int
         # OUTPUT: weights + biases vector
         # saves results
         file_aux  = open(experiment_name+'/results.txt','a')
-        file_aux.write('\n\ngen best mean std sigma_prime mutation_r crossover_r')
+        # file_aux.write('\n\ngen best mean std sigma_prime mutation_r crossover_r')
         print( '\n GENERATION '+str(i)+' '+str(round(best_fitness,6))+' '+str(round(mean_fitness,6))+' '+str(round(std_fitness,6))+' '
               +str(round(sigma_prime, 6))+' '+str(round(mr, 6))+' '+str(round(cr, 6)))
         file_aux.write('\n'+str(i)+' '+str(round(best_fitness,6))+' '+str(round(mean_fitness,6))+' '+str(round(std_fitness,6))+' '+str(round(sigma_prime, 6))+' '+str(round(mr, 6))+' '+str(round(cr, 6)))
@@ -441,6 +441,10 @@ def basic_ea (popsize:int, max_gen:int, mr:float, cr:float, n_hidden_neurons:int
 
         # saves file with the best solution
         np.savetxt(experiment_name+'/best.txt',best_individual)
+
+        if not os.path.exists('basic_solutions'):
+            os.makedirs('basic_solutions')
+        np.savetxt(f'basic_solutions/{env.enemyn}best.txt', best_individual)
 
         # saves simulation state
         solutions = [population, fitnesses]
