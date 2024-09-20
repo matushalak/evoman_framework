@@ -225,7 +225,7 @@ notimproved = 0
 
 for i in range(ini_g+1, gens):
 
-    offspring = crossover(pop)  # crossover
+    offspring = crossover(pop)  # 
     fit_offspring = evaluate(offspring)   # evaluation
     pop = np.vstack((pop,offspring))
     fit_pop = np.append(fit_pop,fit_offspring)
@@ -282,6 +282,7 @@ for i in range(ini_g+1, gens):
 
     # saves simulation state
     solutions = [pop, fit_pop]
+    print(pop.shape)
     env.update_solutions(solutions)
     env.save_state()
 
