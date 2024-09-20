@@ -38,10 +38,20 @@ def main():
     '''Main function for basic EA, runs the EA which saves results'''
     # command line arguments for experiment parameters
     args = parse_args()
+    popsize = args.popsize
+    mg = args.maxgen
+    cr = args.crossover_rate
+    mr = args.mutation_rate
+    n_hidden = args.nhidden
+    enemy = args.enemy
+
     if isinstance(args.exp_name, str):
         experiment_name = 'basic_' + args.exp_name
     else:
         experiment_name = 'basic_' + input("Enter Experiment (directory) Name:")
+    
+    # add enemy name
+    experiment_name = experiment_name + f'_{enemy}'
     # directory to save experimental results
     if not os.path.exists(experiment_name):
         os.makedirs(experiment_name)
@@ -50,16 +60,6 @@ def main():
     headless = True
     if headless:
         os.environ["SDL_VIDEODRIVER"] = "dummy"
-
-    popsize = args.popsize
-    mg = args.maxgen
-    cr = args.crossover_rate
-    mr = args.mutation_rate
-    n_hidden = args.nhidden
-    enemy = args.enemy
-
-    # add enemy name
-    experiment_name = experiment_name + f'_{enemy}'
 
     # initializes simulation in individual evolution mode, for single static enemy.
     env = Environment(experiment_name=experiment_name,

@@ -19,7 +19,7 @@ def parse_args():
     # Initialize the argument parser
     parser = argparse.ArgumentParser(description="Play with chosen best solution of chosen experiment:")
     parser.add_argument('-res', '--results', type=str, required=True, default = False, help= "Provide path to experiments file to analyze:")
-    parser.add_argument('-tagainst', '--test_against', type = list, required=True, default = False, help='Provide list of enemies to test against')
+    parser.add_argument('-tagainst', '--test_against', nargs = '+', type = int, required=True, default = False, help='Provide list of enemies to test against')
     return parser.parse_args()
 
 # get experiment directory
@@ -38,7 +38,7 @@ solution_dims = sum(1 for _ in open(solution)) - 1 # (always one extra line)
 # get n_hidden neurons from this 
 # individual_dims = (env.get_num_sensors()+1)*n_hidden_neurons + (n_hidden_neurons+1)*5
 # 5 for 5 output neurons, 26 for 20 inputs, and one bias / weight
-n_hidden_neurons = (solution_dims - 5)/26
+n_hidden_neurons = int(round((solution_dims - 5)/26))
 
 enems = [int(exp_dir[-1])]
 # initializes environment for single objective mode (specialist)  with static enemy and ai player
@@ -53,7 +53,7 @@ env = Environment(experiment_name=experiment_name,
 
 
 # tests for each enemy
-test_enemies = list(map(int, args.test_against))
+test_enemies = args.test_against
 for en in test_enemies:
 
 	#Update the enemy
@@ -61,7 +61,7 @@ for en in test_enemies:
 
 	# Load specialist controller
 	sol = np.loadtxt(solution)
-	print('\n LOADING SAVED SPECIALIST SOLUTION FOR ENEMY '+str(en)+' \n')
+	print('\n LOADING SAVED SPECIALIST SOLUTION FOR ENEMY ' + exp_dir[-1] + '\n')
 	f,pl, el, t = env.play(sol)
       
 	print(f, pl, el, t)
