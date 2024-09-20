@@ -1,7 +1,0 @@
-
-
-PARAMETER CHANGE: enemies = [6]
-
-PARAMETER CHANGE: enemies = [7]
-
-PARAMETER CHANGE: enemies = [8]

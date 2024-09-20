@@ -24,12 +24,13 @@ def parse_args():
 
     # Define arguments
     parser.add_argument('-name', '--exp_name', type=str, required=False, help="Experiment name")
-    parser.add_argument('-p', '--popsize', type=int, required=False, default = 100, help="Population size (eg. 100)")
+    parser.add_argument('-pop', '--popsize', type=int, required=False, default = 100, help="Population size (eg. 100)")
     parser.add_argument('-mg', '--maxgen', type=int, required=False, default = 500, help="Max generations (eg. 500)")
     parser.add_argument('-cr', '--crossover_rate', type=float, required=False, default = 0.5, help="Crossover rate (e.g., 0.8)")
     parser.add_argument('-mr', '--mutation_rate', type=float, required=False, default = 0.1, help="Mutation rate (e.g., 0.05)")
     parser.add_argument('-nh', '--nhidden', type=int, required=False, default = 10, help="Number of Hidden Neurons (eg. 10)")
     parser.add_argument('-tst', '--test', type=bool, required=False, default = False, help="Train or Test (default = Train)")
+    parser.add_argument('-nme', '--enemy', type=int, required=False, default = 2, help="Select Enemy")
 
     return parser.parse_args()
 
@@ -55,10 +56,14 @@ def main():
     cr = args.crossover_rate
     mr = args.mutation_rate
     n_hidden = args.nhidden
+    enemy = args.enemy
+
+    # add enemy name
+    experiment_name = experiment_name + f'_{enemy}'
 
     # initializes simulation in individual evolution mode, for single static enemy.
     env = Environment(experiment_name=experiment_name,
-                    enemies=[2],
+                    enemies=[enemy],
                     playermode="ai",
                     player_controller=player_controller(n_hidden), # you  can insert your own controller here
                     enemymode="static",
@@ -89,6 +94,9 @@ def main():
         basic_ea(popsize, mg, mr, cr, n_hidden, experiment_name,
                  env, new_evolution=False)
 
+# for parallelization later
+# worker_env = None
+
 # # runs game (evaluate fitness for 1 individual)
 def run_game(env:Environment,individual, test=False):
     '''Runs game and returns individual solution's fitness'''
@@ -107,22 +115,25 @@ def evaluate_fitnesses(env, population):
     # Instead of passing the full environment, pass only the configuration or parameters needed to reinitialize it
     name  = env.experiment_name
     contr = env.player_controller
+    enemies = env.enemies
     fitnesses = Parallel(n_jobs=-1)(
-        delayed(run_game_in_worker)(name, contr, ind) for ind in population
+        delayed(run_game_in_worker)(name, contr, enemies, ind) for ind in population
     )
     return fitnesses
 
-def run_game_in_worker(name, contr, ind):
+def run_game_in_worker(name, contr, enemies, ind):
     # Recreate or reinitialize the environment from env_config inside the worker
-    env = Environment(experiment_name=name,
-                    enemies=[2],
-                    playermode="ai",
-                    player_controller=contr, # you  can insert your own controller here
-                    enemymode="static",
-                    level=2,
-                    speed="fastest",
-                    visuals=False)
-    return run_game(env, ind)
+    # global worker_env
+    # if worker_env is None:
+    worker_env = Environment(experiment_name=name,
+                            enemies=enemies,
+                            playermode="ai",
+                            player_controller=contr, # you  can insert your own controller here
+                            enemymode="static",
+                            level=2,
+                            speed="fastest",
+                            visuals=False)
+    return run_game(worker_env, ind)
 
 # check and apply limits on genes (of offspring - after mutation / recombination)
 def within_genetic_code(gene, gene_limits:list[float, float]):
@@ -339,6 +350,7 @@ def basic_ea (popsize:int, max_gen:int, mr:float, cr:float, n_hidden_neurons:int
         env.load_state()
         population = env.solutions[0]
         fitnesses = env.solutions[1]
+        gene_limits = [-1.0, 1.0]
 
         best_idx = np.argmax(fitnesses)
         mean_fitness = np.mean(fitnesses)
