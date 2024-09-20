@@ -318,7 +318,7 @@ def basic_ea (popsize:int, max_gen:int, mr:float, cr:float, n_hidden_neurons:int
         ini_g = 0
         gene_limits = [-1.0, 1.0]
         # starting step size 0.5?
-        sigma_prime = 0.5
+        sigma_prime = 0.05
         population = initialize_population(popsize, individual_dims, gene_limits)  
         fitnesses = evaluate_fitnesses(env, population)
         solutions = [population, fitnesses]
@@ -371,8 +371,9 @@ def basic_ea (popsize:int, max_gen:int, mr:float, cr:float, n_hidden_neurons:int
     for i in range(max_gen):
         # niching (fitness sharing)
         shared_fitnesses = fitness_sharing(fitnesses, population, gene_limits)
+        # shared_fitnesses = fitnesses # disables fitness sharing
         # ?? crowding ??
-        # ?? speciation ??
+        # ?? speciation - islands ??
 
         # Parent selection: (Tournament? - just first try) Probability based - YES
         parents, parent_fitnesses = parent_selection(population, shared_fitnesses, env)
@@ -404,21 +405,24 @@ def basic_ea (popsize:int, max_gen:int, mr:float, cr:float, n_hidden_neurons:int
             if stagnation < 10:
                 mr += .02
                 cr += 0.03
+                sigma_prime += 0.03
             elif stagnation >= 10 and stagnation < 20:
                 mr += .03
                 cr += 0.05
+                sigma_prime += 0.06
             else:
                 # too long stagnation, need new blood
-                new_blood = initialize_population(popsize//3, individual_dims,
+                new_blood = initialize_population(popsize//2, individual_dims,
                                                   gene_limits)
                 new_fitnesses = evaluate_fitnesses(env, new_blood)
 
                 # replace a third of population with new blood
-                population[-(popsize // 3):] = new_blood
-                fitnesses[-(popsize // 3):] = new_fitnesses
+                population[-(popsize // 2):] = new_blood
+                fitnesses[-(popsize // 2):] = new_fitnesses
     
                 stagnation = 0 # reset stagnation
                 mr, cr = starting_mutation_rate, starting_crossover_rate
+                sigma_prime = 0.05
                 print('-----New Blood!-----')
 
         # OUTPUT: weights + biases vector
