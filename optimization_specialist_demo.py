@@ -28,9 +28,9 @@ experiment_name = 'optimization_test'
 if not os.path.exists(experiment_name):
     os.makedirs(experiment_name)
 
+# results in 265 element long 'solution' array [200 for i->h weights, 10 for h biases, 50 for h->o weights, 5 for o biases ] 
+# vs 105 element long with 0 hidden layers 
 n_hidden_neurons = 10
-
-
 
 # initializes simulation in individual evolution mode, for single static enemy.
 env = Environment(experiment_name=experiment_name,
@@ -70,6 +70,7 @@ last_best = 0
 
 # runs simulation
 def simulation(env,x):
+    # vfitness, vplayerlife, venemylife, vtime
     f,p,e,t = env.play(pcont=x)
     return f
 
@@ -238,6 +239,7 @@ for i in range(ini_g+1, gens):
     fit_pop_cp = fit_pop
     fit_pop_norm =  np.array(list(map(lambda y: norm(y,fit_pop_cp), fit_pop))) # avoiding negative probabilities, as fitness is ranges from negative numbers
     probs = (fit_pop_norm)/(fit_pop_norm).sum()
+    # choose indices of elements proportional to their fitness
     chosen = np.random.choice(pop.shape[0], npop , p=probs, replace=False)
     chosen = np.append(chosen[1:],best)
     pop = pop[chosen]
