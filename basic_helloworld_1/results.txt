@@ -1,0 +1,199 @@
+
+
+gen best mean std sigma_prime mutation_r crossover_r
+0 39.013548 -3.899673 6.766781 0.5 0.1 0.5
+
+gen best mean std sigma_prime mutation_r crossover_r
+0 66.013548 15.52568 17.177033 0.52174 0.1 0.5
+
+gen best mean std sigma_prime mutation_r crossover_r
+1 66.013548 15.52568 17.177033 0.470686 0.12 0.53
+
+gen best mean std sigma_prime mutation_r crossover_r
+2 66.013548 15.52568 17.177033 0.444414 0.14 0.56
+
+gen best mean std sigma_prime mutation_r crossover_r
+3 66.013548 15.52568 17.177033 0.474568 0.16 0.59
+
+gen best mean std sigma_prime mutation_r crossover_r
+4 66.013548 15.52568 17.177033 0.518731 0.18 0.62
+
+gen best mean std sigma_prime mutation_r crossover_r
+5 66.013548 15.52568 17.177033 0.516589 0.2 0.65
+
+gen best mean std sigma_prime mutation_r crossover_r
+6 66.247427 38.560793 17.333749 0.519204 0.1 0.5
+
+gen best mean std sigma_prime mutation_r crossover_r
+7 66.247427 38.560793 17.333749 0.488175 0.12 0.53
+
+gen best mean std sigma_prime mutation_r crossover_r
+8 94.785064 33.411144 16.483924 0.477163 0.1 0.5
+
+gen best mean std sigma_prime mutation_r crossover_r
+9 94.785064 33.411144 16.483924 0.436789 0.12 0.53
+
+gen best mean std sigma_prime mutation_r crossover_r
+10 94.785064 33.411144 16.483924 0.415859 0.14 0.56
+
+gen best mean std sigma_prime mutation_r crossover_r
+11 94.785064 33.411144 16.483924 0.452417 0.16 0.59
+
+gen best mean std sigma_prime mutation_r crossover_r
+12 94.785064 33.411144 16.483924 0.474039 0.18 0.62
+
+gen best mean std sigma_prime mutation_r crossover_r
+13 94.785064 33.411144 16.483924 0.504457 0.2 0.65
+
+gen best mean std sigma_prime mutation_r crossover_r
+14 94.785064 33.411144 16.483924 0.477938 0.22 0.68
+
+gen best mean std sigma_prime mutation_r crossover_r
+15 94.785064 33.411144 16.483924 0.459151 0.24 0.71
+
+gen best mean std sigma_prime mutation_r crossover_r
+16 94.785064 33.411144 16.483924 0.428413 0.26 0.74
+
+gen best mean std sigma_prime mutation_r crossover_r
+17 94.785064 33.411144 16.483924 0.432814 0.28 0.77
+
+gen best mean std sigma_prime mutation_r crossover_r
+18 94.785064 33.411144 16.483924 0.457408 0.31 0.82
+
+gen best mean std sigma_prime mutation_r crossover_r
+19 94.785064 33.411144 16.483924 0.471922 0.34 0.87
+
+gen best mean std sigma_prime mutation_r crossover_r
+20 94.785064 33.411144 16.483924 0.512493 0.37 0.92
+
+gen best mean std sigma_prime mutation_r crossover_r
+21 94.785064 33.411144 16.483924 0.504201 0.4 0.97
+
+gen best mean std sigma_prime mutation_r crossover_r
+22 94.785064 33.411144 16.483924 0.507457 0.43 1.02
+
+gen best mean std sigma_prime mutation_r crossover_r
+23 94.785064 33.411144 16.483924 0.536013 0.46 1.07
+
+gen best mean std sigma_prime mutation_r crossover_r
+24 94.785064 33.411144 16.483924 0.599862 0.49 1.12
+
+gen best mean std sigma_prime mutation_r crossover_r
+25 94.785064 33.411144 16.483924 0.580613 0.52 1.17
+
+gen best mean std sigma_prime mutation_r crossover_r
+26 94.785064 33.411144 16.483924 0.613006 0.55 1.22
+
+gen best mean std sigma_prime mutation_r crossover_r
+27 94.785064 33.411144 16.483924 0.622781 0.58 1.27
+
+gen best mean std sigma_prime mutation_r crossover_r
+28 94.785064 33.411144 16.483924 0.583265 0.1 0.5
+
+gen best mean std sigma_prime mutation_r crossover_r
+29 94.785064 33.411144 16.483924 0.56244 0.12 0.53
+
+gen best mean std sigma_prime mutation_r crossover_r
+30 94.785064 33.411144 16.483924 0.56789 0.14 0.56
+
+gen best mean std sigma_prime mutation_r crossover_r
+31 94.785064 33.411144 16.483924 0.591797 0.16 0.59
+
+gen best mean std sigma_prime mutation_r crossover_r
+32 94.918596 43.344225 22.500983 0.543025 0.1 0.5
+
+gen best mean std sigma_prime mutation_r crossover_r
+33 94.918596 43.344225 22.500983 0.57128 0.12 0.53
+
+gen best mean std sigma_prime mutation_r crossover_r
+34 94.918596 43.344225 22.500983 0.501922 0.14 0.56
+
+gen best mean std sigma_prime mutation_r crossover_r
+35 94.918596 43.344225 22.500983 0.535225 0.16 0.59
+
+gen best mean std sigma_prime mutation_r crossover_r
+36 94.918596 43.344225 22.500983 0.537395 0.18 0.62
+
+gen best mean std sigma_prime mutation_r crossover_r
+37 94.918596 43.344225 22.500983 0.469893 0.2 0.65
+
+gen best mean std sigma_prime mutation_r crossover_r
+38 94.918596 43.344225 22.500983 0.514598 0.22 0.68
+
+gen best mean std sigma_prime mutation_r crossover_r
+39 94.918596 43.344225 22.500983 0.52444 0.24 0.71
+
+gen best mean std sigma_prime mutation_r crossover_r
+40 94.918596 43.344225 22.500983 0.537278 0.26 0.74
+
+gen best mean std sigma_prime mutation_r crossover_r
+41 94.918596 43.344225 22.500983 0.541743 0.28 0.77
+
+gen best mean std sigma_prime mutation_r crossover_r
+42 94.918596 43.344225 22.500983 0.574193 0.31 0.82
+
+gen best mean std sigma_prime mutation_r crossover_r
+43 94.918596 43.344225 22.500983 0.546233 0.34 0.87
+
+gen best mean std sigma_prime mutation_r crossover_r
+44 94.918596 43.344225 22.500983 0.528506 0.37 0.92
+
+gen best mean std sigma_prime mutation_r crossover_r
+45 94.918596 43.344225 22.500983 0.545656 0.4 0.97
+
+gen best mean std sigma_prime mutation_r crossover_r
+46 94.918596 43.344225 22.500983 0.545923 0.43 1.02
+
+gen best mean std sigma_prime mutation_r crossover_r
+47 94.918596 43.344225 22.500983 0.553037 0.46 1.07
+
+gen best mean std sigma_prime mutation_r crossover_r
+48 94.918596 43.344225 22.500983 0.585428 0.49 1.12
+
+gen best mean std sigma_prime mutation_r crossover_r
+49 94.918596 43.344225 22.500983 0.600871 0.52 1.17
+
+gen best mean std sigma_prime mutation_r crossover_r
+50 94.918596 43.344225 22.500983 0.618734 0.55 1.22
+
+gen best mean std sigma_prime mutation_r crossover_r
+51 94.918596 43.344225 22.500983 0.712358 0.58 1.27
+
+gen best mean std sigma_prime mutation_r crossover_r
+52 94.918596 43.344225 22.500983 0.703944 0.1 0.5
+
+gen best mean std sigma_prime mutation_r crossover_r
+53 94.918596 43.344225 22.500983 0.766115 0.12 0.53
+
+gen best mean std sigma_prime mutation_r crossover_r
+54 94.918596 43.344225 22.500983 0.836126 0.14 0.56
+
+gen best mean std sigma_prime mutation_r crossover_r
+55 94.918596 43.344225 22.500983 0.842141 0.16 0.59
+
+gen best mean std sigma_prime mutation_r crossover_r
+56 94.918596 43.344225 22.500983 0.802069 0.18 0.62
+
+gen best mean std sigma_prime mutation_r crossover_r
+57 94.918596 43.344225 22.500983 0.71034 0.2 0.65
+
+gen best mean std sigma_prime mutation_r crossover_r
+58 94.918596 43.344225 22.500983 0.689141 0.22 0.68
+
+gen best mean std sigma_prime mutation_r crossover_r
+59 94.918596 43.344225 22.500983 0.688998 0.24 0.71
+
+gen best mean std sigma_prime mutation_r crossover_r
+60 94.918596 43.344225 22.500983 0.644247 0.26 0.74
+
+gen best mean std sigma_prime mutation_r crossover_r
+61 94.918596 43.344225 22.500983 0.688801 0.28 0.77
+
+gen best mean std sigma_prime mutation_r crossover_r
+62 94.918596 43.344225 22.500983 0.709324 0.31 0.82
+
+gen best mean std sigma_prime mutation_r crossover_r
+63 94.918596 43.344225 22.500983 0.67901 0.34 0.87
+
+gen best mean std sigma_prime mutation_r crossover_r
+64 94.918596 43.344225 22.500983 0.71717 0.37 0.92

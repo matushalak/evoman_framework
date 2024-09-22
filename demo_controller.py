@@ -15,44 +15,61 @@ def sigmoid_activation(x):
 # implements controller structure for player
 class player_controller(Controller):
 	def __init__(self, _n_hidden):
+		# Input (20 sensors) -> Hidden -> OUTPUT (5 decisions)
+		# deterine (starting) number of hidden nodes in hidden layer
 		self.n_hidden = [_n_hidden]
 
 	def set(self,controller, n_inputs):
+		controller = np.array(controller)
+		expected_size = (n_inputs + 1) * self.n_hidden[0] + (self.n_hidden[0] + 1) * 5
+		if controller.size != expected_size:
+			breakpoint()
+			raise ValueError(f"Controller size mismatch! Expected {expected_size}, but got {controller.size}")
+		
 		# Number of hidden neurons
-
 		if self.n_hidden[0] > 0:
 			# Preparing the weights and biases from the controller of layer 1
-
+			# Input -> Hidden (fully connected)
 			# Biases for the n hidden neurons
 			self.bias1 = controller[:self.n_hidden[0]].reshape(1, self.n_hidden[0])
+
 			# Weights for the connections from the inputs to the hidden nodes
+			# inputs * self.n_hidden = input fully connected to hidden
+			# + self.n_hidden = first n_hidden indices used for bias
 			weights1_slice = n_inputs * self.n_hidden[0] + self.n_hidden[0]
+			# rows = input nodes
+			# columns = hidden layer nodes
 			self.weights1 = controller[self.n_hidden[0]:weights1_slice].reshape((n_inputs, self.n_hidden[0]))
 
 			# Outputs activation first layer.
-
-
+			# Hidden -> Output (fully connected)
 			# Preparing the weights and biases from the controller of layer 2
 			self.bias2 = controller[weights1_slice:weights1_slice + 5].reshape(1, 5)
+			# rows = hidden layer nodes
+			# columns = output nodes
 			self.weights2 = controller[weights1_slice + 5:].reshape((self.n_hidden[0], 5))
 
+	# CAN OVERWRITE THIS (eg. if we want to IMPLEMENT NEAT)
 	def control(self, inputs, controller):
-		# Normalises the input using min-max scaling
+		controller = np.array(controller)
+		# Normalises the input [0,1] using min-max scaling
 		inputs = (inputs-min(inputs))/float((max(inputs)-min(inputs)))
 
 		if self.n_hidden[0]>0:
 			# Preparing the weights and biases from the controller of layer 1
 
 			# Outputs activation first layer.
-			output1 = sigmoid_activation(inputs.dot(self.weights1) + self.bias1)
+			output1 = sigmoid_activation((inputs @ self.weights1) + self.bias1)
 
 			# Outputting activated second layer. Each entry in the output is an action
-			output = sigmoid_activation(output1.dot(self.weights2)+ self.bias2)[0]
+			output = sigmoid_activation((output1 @ self.weights2) + self.bias2)[0]
 		else:
+			# the demos (both specialist AND generalist) are just on a Perceptron network with no hidden layers
+			# 5 biases and a fully connected network of inputs -> outputs
 			bias = controller[:5].reshape(1, 5)
 			weights = controller[5:].reshape((len(inputs), 5))
 
-			output = sigmoid_activation(inputs.dot(weights) + bias)[0]
+			output = sigmoid_activation((inputs @ weights) + bias)[0]
 
 		# takes decisions about sprite actions
 		if output[0] > 0.5:
@@ -90,7 +107,7 @@ class enemy_controller(Controller):
 		self.n_hidden = [_n_hidden]
 
 	def control(self, inputs,controller):
-		# Normalises the input using min-max scaling
+		# Normalises the input between using min-max scaling
 		inputs = (inputs-min(inputs))/float((max(inputs)-min(inputs)))
 
 		if self.n_hidden[0]>0:

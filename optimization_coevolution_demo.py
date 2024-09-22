@@ -77,6 +77,7 @@ last_best = 0
 
 # runs simulation
 def simulation(env,x1,x2):
+	# vfitness, vplayerlife, venemylife, vtime
 	f,p,e,t = env.play(pcont=x1,econt=x2)
 	return f
 
