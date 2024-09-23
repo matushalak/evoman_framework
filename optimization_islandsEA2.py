@@ -94,7 +94,6 @@ def main():
         # with initialization
         evol_exp = islands(popsize, mg, mr, cr, n_hidden, experiment_name,
                             env, n_islands=10, gen_per_island=10)
-        breakpoint()
 
 # for parallelization later
 # worker_env = None
@@ -128,7 +127,7 @@ def evaluate_fitnesses(env, population):
     name  = env.experiment_name
     contr = env.player_controller
     enemies = env.enemies
-    fitnesses = Parallel(n_jobs= 9)(
+    fitnesses = Parallel(n_jobs= -1)(
         delayed(run_game_in_worker)(name, contr, enemies, population[ind,:]) for ind in range(population.shape[0]))
     return np.array(fitnesses)
     # return np.array([run_game(env, population[ind,:]) for ind in range(population.shape[0])])
@@ -164,7 +163,7 @@ def make_islands(n_islands:int, popsize:int, ind_size:int):
     if popsize % n_islands != 0 or popsize <= 0:
         popsize = int(input(f'Enter population size divisible by number of islands ({n_islands}):'))
     # islands = np_array (rows = islands, columns = individuals, depth = genes)
-    return np.random.uniform(-1.0,1.0,(n_islands, popsize, ind_size))
+    return np.random.uniform(-1.0,1.0,(n_islands, popsize//n_islands, ind_size))
   
 def island_life(island, generations_per_island,env, mr = .1, cr = .6):
     # island is a 3D array - 1(island) x popsize x n_genes
@@ -270,7 +269,7 @@ def parallel_island_life(island_slice, gen_per_island,
 def islands(popsize:int, max_gen:int, mr:float, 
             cr:float, n_hidden_neurons:int,
             experiment_name:str, env:Environment,
-            n_islands:int = 5, gen_per_island:int = 10):
+            n_islands:int = -1, gen_per_island:int = 10):
     '''Basically the big EA loop'''
     # number of weights for multilayer with 10 hidden neurons
     individual_dims = (env.get_num_sensors()+1)*n_hidden_neurons + (n_hidden_neurons+1)*5
@@ -285,7 +284,7 @@ def islands(popsize:int, max_gen:int, mr:float,
     enemies = env.enemies
     for cycle in range((max_gen//2)//gen_per_island):
         # Parallelize island life across islands
-        results = Parallel(n_jobs=5)(delayed(parallel_island_life)(islands[isl, :, :], gen_per_island, name, contr, enemies) 
+        results = Parallel(n_jobs=-1)(delayed(parallel_island_life)(islands[isl, :, :], gen_per_island, name, contr, enemies) 
                                       for isl in range(islands.shape[0]))
         
         # Unzip results into evolved islands and best individuals
