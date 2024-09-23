@@ -20,6 +20,7 @@ import numpy as np
 import os
 import argparse
 from joblib import Parallel, delayed
+from concurrent.futures import ThreadPoolExecutor
 from pandas import read_csv
 
 def parse_args():
@@ -124,13 +125,13 @@ def evaluate_fitnesses(env, population):
     ''' Evaluates fitness of each individual in the population of solutions
     parallelized for efficiency'''
     # Instead of passing the full environment, pass only the configuration or parameters needed to reinitialize it
-    # name  = env.experiment_name
-    # contr = env.player_controller
-    # enemies = env.enemies
-    # fitnesses = Parallel(n_jobs= 4)(
-    #     delayed(run_game_in_worker)(name, contr, enemies, population[ind,:]) for ind in range(population.shape[0]))
-    # return np.array(fitnesses)
-    return np.array([run_game(env, population[ind,:]) for ind in range(population.shape[0])])
+    name  = env.experiment_name
+    contr = env.player_controller
+    enemies = env.enemies
+    fitnesses = Parallel(n_jobs= 9)(
+        delayed(run_game_in_worker)(name, contr, enemies, population[ind,:]) for ind in range(population.shape[0]))
+    return np.array(fitnesses)
+    # return np.array([run_game(env, population[ind,:]) for ind in range(population.shape[0])])
 
 def run_game_in_worker(name, contr, enemies, ind):
     # Recreate or reinitialize the environment from env_config inside the worker
@@ -259,7 +260,7 @@ def redistribute_to_islands(population_together):
     eg. based on Euclidian Distance'''
     pass
 
-# Define a wrapper for parallelization
+# Define a wrapper for parallelization (joblib)
 def parallel_island_life(island_slice, gen_per_island,
                          name, contr, enemies):
     # Reinitialize or avoid non-picklable objects inside this function if needed
@@ -269,7 +270,7 @@ def parallel_island_life(island_slice, gen_per_island,
 def islands(popsize:int, max_gen:int, mr:float, 
             cr:float, n_hidden_neurons:int,
             experiment_name:str, env:Environment,
-            n_islands:int = 10, gen_per_island:int = 10):
+            n_islands:int = 5, gen_per_island:int = 10):
     '''Basically the big EA loop'''
     # number of weights for multilayer with 10 hidden neurons
     individual_dims = (env.get_num_sensors()+1)*n_hidden_neurons + (n_hidden_neurons+1)*5
@@ -284,7 +285,7 @@ def islands(popsize:int, max_gen:int, mr:float,
     enemies = env.enemies
     for cycle in range((max_gen//2)//gen_per_island):
         # Parallelize island life across islands
-        results = Parallel(n_jobs=-1)(delayed(parallel_island_life)(islands[isl, :, :], gen_per_island, name, contr, enemies) 
+        results = Parallel(n_jobs=5)(delayed(parallel_island_life)(islands[isl, :, :], gen_per_island, name, contr, enemies) 
                                       for isl in range(islands.shape[0]))
         
         # Unzip results into evolved islands and best individuals
@@ -293,11 +294,11 @@ def islands(popsize:int, max_gen:int, mr:float,
         islands_evolved = np.array(islands_evolved)
         islands_best = list(islands_best)
         best_fits = [ib[-1] for ib in islands_best]
-        print(f'Cycle {cycle}: {max(best_fits)}')
-        breakpoint()
+        fin = time.time()
+        print(f'Cycle {cycle} best fitness: {max(best_fits)}, t:{fin-ini}')
         # migrate between islands
         np.random.shuffle(islands_evolved) # get rid of order
-        islands = np.vstack(migration(islands_evolved))
+        islands = np.array(migration(islands_evolved)).reshape((n_islands,-1, individual_dims))
 
     return islands_best
     # run second half of generations in normal evolutionary mode (mixing everyone together)
