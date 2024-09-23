@@ -122,8 +122,7 @@ def evaluate_fitnesses(env, population):
     contr = env.player_controller
     enemies = env.enemies
     fitnesses = Parallel(n_jobs=-1)(
-        delayed(run_game_in_worker)(name, contr, enemies, ind) for ind in population
-    )
+        delayed(run_game_in_worker)(name, contr, enemies, population[ind,:]) for ind in range(population.shape[0]))
     return fitnesses
 
 def run_game_in_worker(name, contr, enemies, ind):
@@ -180,13 +179,84 @@ def make_islands(n_islands:int, popsize:int, ind_size:int):
     # islands = np_array (rows = islands, columns = individuals, depth = genes)
     return np.random.uniform(-1.0,1.0,(n_islands, popsize, ind_size))
   
-def island_life(island, generations_per_island,env):
-    pop = island
-    fit = evaluate_fitnesses(env,pop)
-    pass
+def island_life(island, generations_per_island,env, mr = .1, cr = .6):
+    # island is a 3D array - 1(island) x popsize x n_genes
+    popsize, indsize = island.shape[-2:]
+    pop = np.reshape(island,(popsize, indsize)) # np 2D array popsize x n_genes
+    fit = evaluate_fitnesses(env,pop) # np 1d array popsize
+    # Start tracking best individual
+    best_idx = np.argmax(fit)
+    best_individual = pop[best_idx,:] # np 1D array n_genes
+    best_fitness = fit[best_idx]
+    
+    # stagnation prevention
+    stagnation = 0
+    starting_mutation_rate, starting_crossover_rate = mr, cr
+    for g in range(generations_per_island):
+        # niching
+        shared_fit = fitness_sharing(fit, pop, [-1.0,1.0]) # np 1d array popsize
+        # Parent selection: (Tournament? - just first try) Probability based - YES
+        parents, parent_fitnesses = parent_selection(pop, shared_fit, env) # np 2d array (popsize x n_genes) & np 1d array popsize
 
-def migration(island1, island2):
-    pass
+        # crossover / recombination: Whole Arithmetic (basic) | Blend Recombination (best)
+        offspring = crossover(parents, cr, blend_recombination)
+        
+        # mutation: Uncorrelated mutation with N step sizes
+        offspring_mutated, sigma_primes = zip(*[uncorrelated_mut_one_sigma(offspring[ind,:], sigma_prime, mr) for ind in range(offspring.shape[0])])
+        offspring_mutated = np.array(offspring_mutated)
+        offspring_fitnesses = evaluate_fitnesses(env, offspring_mutated)
+        sigma_prime = sigma_primes[np.argmax(offspring_fitnesses)]
+
+        # Survivor selection with elitism & some randomness
+        pop, fit = survivor_selection(parents, parent_fitnesses,
+                                      list(offspring_mutated), offspring_fitnesses)
+        
+        # Check for best solution
+        best_idx = np.argmax(fit)
+        if fit[best_idx] > best_fitness:
+            best_fitness = fit[best_idx]
+            best_individual = fit[best_idx]
+            
+            stagnation = 0 # reset stagnation
+            mr, cr = starting_mutation_rate, starting_crossover_rate
+        
+        else:
+            stagnation += 1
+            mean_fitness = np.mean(fit)
+            std_fitness = np.std(fit)
+            if stagnation < 10:
+                mr += .02
+                cr += 0.03
+                sigma_prime += 0.03
+            elif stagnation >= 10 and stagnation < 20:
+                mr += .03
+                cr += 0.05
+                sigma_prime += 0.06
+            else:
+                # too long stagnation, need new blood
+                new_blood = initialize_population(popsize//3, pop, [-1.0,1.0])
+                new_fitnesses = evaluate_fitnesses(env, new_blood)
+
+                # replace a third of population with new blood
+                pop[-(popsize // 3):] = new_blood
+                fit[-(popsize // 3):] = new_fitnesses
+    
+                stagnation = 0 # reset stagnation
+                mr, cr = starting_mutation_rate, starting_crossover_rate
+                sigma_prime = 0.05
+                print('-----New Blood!-----')
+    np.reshape(pop, (1,popsize, indsize)) # back to island format
+    return pop
+        
+
+
+def migration(island1, island2, N:int = 3):
+    '''Exhange 1/N of population between islands randomly
+            by default exchange 1/3'''
+    np.random.shuffle(island1)
+    np.random.shuffle(island2)
+    island1[:len(island2//N)], island2[-len(island2//N):] = island2[-len(island2//N):], island1[:len(island2//N)]
+    return island1, island2
 
 def redistribute_to_islands(population_together):
     ''''More advanced - redistribute evolved population to different islands
@@ -207,7 +277,7 @@ def islands(popsize:int, max_gen:int, mr:float,
 
     for cycle in range((max_gen//2)//gen_per_island):
         # parallelize island life
-        islands_evolved = Parallel(n_jobs=10)(delayed(island_life)(island, gen_per_island, env) for island in islands)
+        islands_evolved = Parallel(n_jobs=10)(delayed(island_life)(islands[isl, :, :], gen_per_island, env) for isl in range(islands.shape[0]))
         
         # migrate between islands
         np.random.shuffle(islands_evolved) # get rid of order
@@ -221,50 +291,50 @@ def islands(popsize:int, max_gen:int, mr:float,
         pass
 
 # promoting diversity
-def fitness_sharing(fitnesses: list[float], population: list[list], 
-                    gene_limits:list[float, float], k = 0.15):
+def fitness_sharing(fitnesses: np.array, population: np.array, 
+                    gene_limits:list[float, float] = [-1.0,1.0], k = 0.15):
     """Apply fitness sharing as described in the slide to promote diversity and niche creation."""
     # Calculate the max possible distance between two genes
     gene_distance_max = gene_limits[1] - gene_limits[0]  
     # Calculate max possible distance between two individuals and sigma_share
-    max_possible_distance = gene_distance_max * np.sqrt(len(population[0])) 
+    max_possible_distance = gene_distance_max * np.sqrt(population.shape[1]) 
     # Scaling factor k controls fitness sharing radius
     sigma_share = k * max_possible_distance  
 
-    shared_fitnesses = []
-    for i, individual_i in enumerate(population):
+    shared_fitnesses = np.array()
+    for i in range(population.shape[0]):
         niche_count = 0
-        for j, individual_j in enumerate(population):
+        for j in enumerate(population.shape[0]):
             if i != j:  # No need to compare with self
-                distance = np.linalg.norm(np.array(individual_i) - np.array(individual_j)) 
+                distance = np.linalg.norm(population[i,:] - population[j,:]) 
                 if distance < sigma_share:
                     niche_count += (1 - (distance / sigma_share))
         # Add the individual's own contribution (sh(d) = 1 for distance 0 with itself)
         niche_count += 1  
         shared_fitness = fitnesses[i] / niche_count
-        shared_fitnesses.append(shared_fitness)
+        np.append(shared_fitnesses, shared_fitness)
     return shared_fitnesses
 
 # Tournament selection
 def tournament_selection(population, fitnesses, k: int = 15) -> list:
     """Tournament selection using tournament size = k.
             Gives 1 WINNER of TOURNAMENT"""
-    players = np.random.choice(np.arange(len(population)), size=k)
+    players = np.random.choice(np.arange(population.shape[0]), size=k)
     best_individual_idx = max(players, key=lambda i: fitnesses[i])
-    return population[best_individual_idx]
+    return population[best_individual_idx,:]
 
 # Parent selection
 def parent_selection(population, fitnesses, env:Environment, n_children = 2):
     '''Tournament-based parent selection (for now)'''    
-    n_parents = int(len(population) / n_children)
+    n_parents = int(population.shape[0] / n_children)
     # genotypes of parents, fitnesses of those genotypes
     g_parents = []
     for _ in range(n_parents):
         for _ in range(n_children):
-            parent = tournament_selection(population, fitnesses)
+            parent = tournament_selection(population, fitnesses) # 1d np array n_genes
             g_parents.append(parent)
     # (parallelized) fitness evaluation
-    f_parents = evaluate_fitnesses(env, g_parents)
+    f_parents = evaluate_fitnesses(env, g_parents) # 1d array
     return g_parents, f_parents
 
 # Survivor selection with elitism and random diversity preservation
@@ -272,9 +342,10 @@ def survivor_selection(parents, parent_fitnesses,
                        offspring, offspring_fitnesses, elite_fraction=0.5):
     """Select survivors using elitism with some randomness to maintain diversity."""
     # Combine parents and offspring
-    total_population = parents + offspring
-    total_fitnesses = parent_fitnesses + offspring_fitnesses
+    total_population = np.vstack(parents, offspring)
+    total_fitnesses = np.concat(parent_fitnesses, offspring_fitnesses)
     # Sort by fitness in descending order
+    # Sort np array?
     sorted_individuals = sorted(zip(total_fitnesses, total_population), key=lambda x: x[0], reverse=True)
     
     # Select elites (the top portion of the population)
@@ -333,7 +404,7 @@ def crossover (all_parents, p_crossover,
             ch1, ch2 = recombination_operator(parent1, parent2)
             offspring.append(ch1)
             offspring.append(ch2)
-    return offspring
+    return np.array(offspring).reshape(-1, len(all_parents[0]))
 
 def uncorrelated_mut_one_sigma(individual, sigma, mutation_rate):
     ''' 
@@ -440,13 +511,13 @@ def basic_ea (popsize:int, max_gen:int, mr:float, cr:float, n_hidden_neurons:int
                 sigma_prime += 0.06
             else:
                 # too long stagnation, need new blood
-                new_blood = initialize_population(popsize//2, individual_dims,
+                new_blood = initialize_population(popsize//3, individual_dims,
                                                   gene_limits)
                 new_fitnesses = evaluate_fitnesses(env, new_blood)
 
                 # replace a third of population with new blood
-                population[-(popsize // 2):] = new_blood
-                fitnesses[-(popsize // 2):] = new_fitnesses
+                population[-(popsize // 3):] = new_blood
+                fitnesses[-(popsize // 3):] = new_fitnesses
     
                 stagnation = 0 # reset stagnation
                 mr, cr = starting_mutation_rate, starting_crossover_rate

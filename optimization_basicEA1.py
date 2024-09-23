@@ -412,13 +412,13 @@ def basic_ea (popsize:int, max_gen:int, mr:float, cr:float, n_hidden_neurons:int
                 sigma_prime += 0.06
             else:
                 # too long stagnation, need new blood
-                new_blood = initialize_population(popsize//2, individual_dims,
+                new_blood = initialize_population(popsize//3, individual_dims,
                                                   gene_limits)
                 new_fitnesses = evaluate_fitnesses(env, new_blood)
 
                 # replace a third of population with new blood
-                population[-(popsize // 2):] = new_blood
-                fitnesses[-(popsize // 2):] = new_fitnesses
+                population[-(popsize // 3):] = new_blood
+                fitnesses[-(popsize // 3):] = new_fitnesses
     
                 stagnation = 0 # reset stagnation
                 mr, cr = starting_mutation_rate, starting_crossover_rate
