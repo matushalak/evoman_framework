@@ -51,9 +51,9 @@ def main():
     enemy = args.enemy
 
     if isinstance(args.exp_name, str):
-        experiment_name = 'basic_' + args.exp_name
+        experiment_name = 'islands_' + args.exp_name
     else:
-        experiment_name = 'basic_' + input("Enter Experiment (directory) Name:")
+        experiment_name = 'islands_' + input("Enter Experiment (directory) Name:")
     
     # add enemy name
     experiment_name = experiment_name + f'_{enemy}'
@@ -91,16 +91,22 @@ def main():
     if not os.path.exists(experiment_name+'/evoman_solstate'):
         print( '\nNEW EVOLUTION\n')
         # with initialization
-        basic_ea(popsize, mg, mr, cr, n_hidden, experiment_name,
-                 env)
-    else:
-        print( '\nCONTINUING EVOLUTION\n')
-        # without initialization & loading
-        basic_ea(popsize, mg, mr, cr, n_hidden, experiment_name,
-                 env, new_evolution=False)
+        evol_exp = islands(popsize, mg, mr, cr, n_hidden, experiment_name,
+                            env, n_islands=10, gen_per_island=10)
+        breakpoint()
 
 # for parallelization later
 # worker_env = None
+def initialize_env(name, contr, enemies):
+    enviro =  Environment(experiment_name=name,
+                        enemies=enemies,
+                        playermode="ai",
+                        player_controller=contr, # you  can insert your own controller here
+                        enemymode="static",
+                        level=2,
+                        speed="fastest",
+                        visuals=False)
+    return enviro
 
 # # runs game (evaluate fitness for 1 individual)
 def run_game(env:Environment,individual, test=False):
@@ -118,25 +124,19 @@ def evaluate_fitnesses(env, population):
     ''' Evaluates fitness of each individual in the population of solutions
     parallelized for efficiency'''
     # Instead of passing the full environment, pass only the configuration or parameters needed to reinitialize it
-    name  = env.experiment_name
-    contr = env.player_controller
-    enemies = env.enemies
-    fitnesses = Parallel(n_jobs=-1)(
-        delayed(run_game_in_worker)(name, contr, enemies, population[ind,:]) for ind in range(population.shape[0]))
-    return fitnesses
+    # name  = env.experiment_name
+    # contr = env.player_controller
+    # enemies = env.enemies
+    # fitnesses = Parallel(n_jobs= 4)(
+    #     delayed(run_game_in_worker)(name, contr, enemies, population[ind,:]) for ind in range(population.shape[0]))
+    # return np.array(fitnesses)
+    return np.array([run_game(env, population[ind,:]) for ind in range(population.shape[0])])
 
 def run_game_in_worker(name, contr, enemies, ind):
     # Recreate or reinitialize the environment from env_config inside the worker
     # global worker_env
     # if worker_env is None:
-    worker_env = Environment(experiment_name=name,
-                            enemies=enemies,
-                            playermode="ai",
-                            player_controller=contr, # you  can insert your own controller here
-                            enemymode="static",
-                            level=2,
-                            speed="fastest",
-                            visuals=False)
+    worker_env = initialize_env(name, contr, enemies)
     return run_game(worker_env, ind)
 
 # check and apply limits on genes (of offspring - after mutation / recombination)
@@ -158,23 +158,9 @@ def initialize_population(popsize, individual_dims, gene_limits:list[float, floa
     population = np.random.uniform(*gene_limits, (popsize, individual_dims))
     return population
 
-# useful for probabilistic selection, for tournament doesnt matter
-def normalize_fitness (one_fitness, all_fitnesses):
-    ''''Normalizes fitness ONE fitness value between 0 and 1
-            the funtion is supposed to be mapped to the whole array of fitness values'''
-    if max(all_fitnesses) - min(all_fitnesses) > 0:
-        normalized_fitness = (one_fitness - min(all_fitnesses)) / (max(all_fitnesses) - min(all_fitnesses))
-    else:
-        normalized_fitness = 0
-
-    # prevent negative or 0 fitness values
-    if normalized_fitness <= 0:
-        normalize_fitness = 0.0000000001
-    return normalized_fitness
-
 # def speciation
 def make_islands(n_islands:int, popsize:int, ind_size:int):
-    if popsize % n_islands != 0 or popsize >= 0:
+    if popsize % n_islands != 0 or popsize <= 0:
         popsize = int(input(f'Enter population size divisible by number of islands ({n_islands}):'))
     # islands = np_array (rows = islands, columns = individuals, depth = genes)
     return np.random.uniform(-1.0,1.0,(n_islands, popsize, ind_size))
@@ -184,17 +170,19 @@ def island_life(island, generations_per_island,env, mr = .1, cr = .6):
     popsize, indsize = island.shape[-2:]
     pop = np.reshape(island,(popsize, indsize)) # np 2D array popsize x n_genes
     fit = evaluate_fitnesses(env,pop) # np 1d array popsize
+    
     # Start tracking best individual
-    best_idx = np.argmax(fit)
+    best_idx = np.argmax(fit) # indexes row of pop / fitness value of best individual
     best_individual = pop[best_idx,:] # np 1D array n_genes
     best_fitness = fit[best_idx]
     
     # stagnation prevention
     stagnation = 0
     starting_mutation_rate, starting_crossover_rate = mr, cr
+    sigma_prime = .05
     for g in range(generations_per_island):
         # niching
-        shared_fit = fitness_sharing(fit, pop, [-1.0,1.0]) # np 1d array popsize
+        shared_fit = fitness_sharing(fit, pop) # np 1d array popsize
         # Parent selection: (Tournament? - just first try) Probability based - YES
         parents, parent_fitnesses = parent_selection(pop, shared_fit, env) # np 2d array (popsize x n_genes) & np 1d array popsize
 
@@ -215,7 +203,7 @@ def island_life(island, generations_per_island,env, mr = .1, cr = .6):
         best_idx = np.argmax(fit)
         if fit[best_idx] > best_fitness:
             best_fitness = fit[best_idx]
-            best_individual = fit[best_idx]
+            best_individual = pop[best_idx,:]
             
             stagnation = 0 # reset stagnation
             mr, cr = starting_mutation_rate, starting_crossover_rate
@@ -246,22 +234,37 @@ def island_life(island, generations_per_island,env, mr = .1, cr = .6):
                 sigma_prime = 0.05
                 print('-----New Blood!-----')
     np.reshape(pop, (1,popsize, indsize)) # back to island format
-    return pop
+    return pop, (best_individual, best_fitness)
         
 
-
-def migration(island1, island2, N:int = 3):
+def migration(islands, N:int = 3):
     '''Exhange 1/N of population between islands randomly
-            by default exchange 1/3'''
-    np.random.shuffle(island1)
-    np.random.shuffle(island2)
-    island1[:len(island2//N)], island2[-len(island2//N):] = island2[-len(island2//N):], island1[:len(island2//N)]
-    return island1, island2
+        by default exchange 1/3'''
+    print('Migration:')
+    migrated_islands = []
+    # rows are individuals
+    for island1, island2 in zip(islands[:, :, :], islands[1:, :, :]):
+        np.random.shuffle(island1)
+        np.random.shuffle(island2)
+        if len(migrated_islands) < 2:
+            island1[:len(island2//N),:], island2[-len(island2//N):,:] = island2[-len(island2//N):,:], island1[:len(island2//N),:]
+            migrated_islands.append(island1)
+        else:
+            migrated_islands[-1] = island1
+        migrated_islands.append(island2)
+    return migrated_islands
 
 def redistribute_to_islands(population_together):
     ''''More advanced - redistribute evolved population to different islands
     eg. based on Euclidian Distance'''
     pass
+
+# Define a wrapper for parallelization
+def parallel_island_life(island_slice, gen_per_island,
+                         name, contr, enemies):
+    # Reinitialize or avoid non-picklable objects inside this function if needed
+    env = initialize_env(name, contr, enemies)  # Re-initialize the environment inside each worker if necessary
+    return island_life(island_slice, gen_per_island, env)
 
 def islands(popsize:int, max_gen:int, mr:float, 
             cr:float, n_hidden_neurons:int,
@@ -275,23 +278,36 @@ def islands(popsize:int, max_gen:int, mr:float,
     # initialize
     islands = make_islands(n_islands, popsize, individual_dims)
 
+    # for parallelization
+    name  = env.experiment_name
+    contr = env.player_controller
+    enemies = env.enemies
     for cycle in range((max_gen//2)//gen_per_island):
-        # parallelize island life
-        islands_evolved = Parallel(n_jobs=10)(delayed(island_life)(islands[isl, :, :], gen_per_island, env) for isl in range(islands.shape[0]))
+        # Parallelize island life across islands
+        results = Parallel(n_jobs=-1)(delayed(parallel_island_life)(islands[isl, :, :], gen_per_island, name, contr, enemies) 
+                                      for isl in range(islands.shape[0]))
         
+        # Unzip results into evolved islands and best individuals
+        islands_evolved, islands_best = zip(*results)
+        
+        islands_evolved = np.array(islands_evolved)
+        islands_best = list(islands_best)
+        best_fits = [ib[-1] for ib in islands_best]
+        print(f'Cycle {cycle}: {max(best_fits)}')
+        breakpoint()
         # migrate between islands
         np.random.shuffle(islands_evolved) # get rid of order
-        islands = np.vstack(*[migration(islands_evolved[i, :, :], islands_evolved[i+1,:,:]) 
-                            for i in range(islands_evolved.shape[0]-1)])
+        islands = np.vstack(migration(islands_evolved))
 
+    return islands_best
     # run second half of generations in normal evolutionary mode (mixing everyone together)
     # (more advanced - put different individuals into different islands)
-    for gen in range(max_gen//2):
-        # normal evolution
-        pass
+    # for gen in range(max_gen//2):
+    #     # normal evolution
+    #     pass
 
 # promoting diversity
-def fitness_sharing(fitnesses: np.array, population: np.array, 
+def fitness_sharing(fitnesses: list, population: list, 
                     gene_limits:list[float, float] = [-1.0,1.0], k = 0.15):
     """Apply fitness sharing as described in the slide to promote diversity and niche creation."""
     # Calculate the max possible distance between two genes
@@ -301,10 +317,10 @@ def fitness_sharing(fitnesses: np.array, population: np.array,
     # Scaling factor k controls fitness sharing radius
     sigma_share = k * max_possible_distance  
 
-    shared_fitnesses = np.array()
+    shared_fitnesses = []
     for i in range(population.shape[0]):
         niche_count = 0
-        for j in enumerate(population.shape[0]):
+        for j in range(population.shape[0]):
             if i != j:  # No need to compare with self
                 distance = np.linalg.norm(population[i,:] - population[j,:]) 
                 if distance < sigma_share:
@@ -312,7 +328,7 @@ def fitness_sharing(fitnesses: np.array, population: np.array,
         # Add the individual's own contribution (sh(d) = 1 for distance 0 with itself)
         niche_count += 1  
         shared_fitness = fitnesses[i] / niche_count
-        np.append(shared_fitnesses, shared_fitness)
+        shared_fitnesses.append(shared_fitness)
     return shared_fitnesses
 
 # Tournament selection
@@ -334,6 +350,7 @@ def parent_selection(population, fitnesses, env:Environment, n_children = 2):
             parent = tournament_selection(population, fitnesses) # 1d np array n_genes
             g_parents.append(parent)
     # (parallelized) fitness evaluation
+    g_parents = np.array(g_parents)
     f_parents = evaluate_fitnesses(env, g_parents) # 1d array
     return g_parents, f_parents
 
@@ -342,8 +359,8 @@ def survivor_selection(parents, parent_fitnesses,
                        offspring, offspring_fitnesses, elite_fraction=0.5):
     """Select survivors using elitism with some randomness to maintain diversity."""
     # Combine parents and offspring
-    total_population = np.vstack(parents, offspring)
-    total_fitnesses = np.concat(parent_fitnesses, offspring_fitnesses)
+    total_population = np.vstack([parents, offspring])
+    total_fitnesses = np.hstack([parent_fitnesses, offspring_fitnesses])
     # Sort by fitness in descending order
     # Sort np array?
     sorted_individuals = sorted(zip(total_fitnesses, total_population), key=lambda x: x[0], reverse=True)
@@ -361,7 +378,7 @@ def survivor_selection(parents, parent_fitnesses,
     # Combine elites and randomly selected individuals
     survivors = elites + selected_remaining
     # Separate fitnesses and individuals for the return
-    return [ind for _, ind in survivors], [fit for fit, _ in survivors]
+    return np.array([ind for _, ind in survivors]), np.array([fit for fit, _ in survivors])
 
 def whole_arithmetic_recombination(p1:list, p2:list, weight:float = .57)->list[list,list]:
     ''''Apply whole arithmetic recombination to create offspring
