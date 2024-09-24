@@ -93,7 +93,7 @@ def main():
         print( '\nNEW EVOLUTION\n')
         # with initialization
         evol_exp = islands(popsize, mg, mr, cr, n_hidden, experiment_name,
-                            env, n_islands=10, gen_per_island=10)
+                            env, n_islands=5, gen_per_island=10)
 
 # for parallelization later
 # worker_env = None
@@ -201,57 +201,31 @@ def island_life(island, generations_per_island,env, mr = .1, cr = .6):
         
         # Check for best solution
         best_idx = np.argmax(fit)
-        if fit[best_idx] > best_fitness:
-            best_fitness = fit[best_idx]
-            best_individual = pop[best_idx,:]
-            
-            stagnation = 0 # reset stagnation
-            mr, cr = starting_mutation_rate, starting_crossover_rate
+        best_fitness = fit[best_idx]
+        best_individual = pop[best_idx,:]
         
-        else:
-            stagnation += 1
-            mean_fitness = np.mean(fit)
-            std_fitness = np.std(fit)
-            if stagnation < 10:
-                mr += .02
-                cr += 0.03
-                sigma_prime += 0.03
-            elif stagnation >= 10 and stagnation < 20:
-                mr += .03
-                cr += 0.05
-                sigma_prime += 0.06
-            else:
-                # too long stagnation, need new blood
-                new_blood = initialize_population(popsize//3, pop, [-1.0,1.0])
-                new_fitnesses = evaluate_fitnesses(env, new_blood)
-
-                # replace a third of population with new blood
-                pop[-(popsize // 3):] = new_blood
-                fit[-(popsize // 3):] = new_fitnesses
-    
-                stagnation = 0 # reset stagnation
-                mr, cr = starting_mutation_rate, starting_crossover_rate
-                sigma_prime = 0.05
-                print('-----New Blood!-----')
     np.reshape(pop, (1,popsize, indsize)) # back to island format
-    return pop, (best_individual, best_fitness)
+    return pop, fit, (best_individual, best_fitness)
         
 
-def migration(islands, N:int = 3):
+def migration(islands, N:int = 5):
     '''Exhange 1/N of population between islands randomly
-        by default exchange 1/3'''
-    print('Migration:')
+        by default exchange 1/3
+        
+        Using RING-ISLAND TOPOLOGY FOR NOW
+        '''
+    # print(f'Migration: {islands.shape}')
     migrated_islands = []
     # rows are individuals
-    for island1, island2 in zip(islands[:, :, :], islands[1:, :, :]):
-        np.random.shuffle(island1)
-        np.random.shuffle(island2)
-        if len(migrated_islands) < 2:
-            island1[:len(island2//N),:], island2[-len(island2//N):,:] = island2[-len(island2//N):,:], island1[:len(island2//N),:]
-            migrated_islands.append(island1)
-        else:
-            migrated_islands[-1] = island1
-        migrated_islands.append(island2)
+    # vstack to that migration from last island to first completes circle
+    for island1, island2 in zip(islands[:, :, :], np.vstack([islands[1:, :, :], islands[:1,:,:]])):
+        # np.random.shuffle(island1)
+        # np.random.shuffle(island2)
+        # breakpoint()
+        updated_island = island2.copy()
+        # last part N of island 1 migrates to 1st part N of island2
+        updated_island[:island2.shape[0]//N,:] = island1[-island2.shape[0]//N:,:]
+        migrated_islands.append(updated_island)
     return migrated_islands
 
 def redistribute_to_islands(population_together):
@@ -269,7 +243,7 @@ def parallel_island_life(island_slice, gen_per_island,
 def islands(popsize:int, max_gen:int, mr:float, 
             cr:float, n_hidden_neurons:int,
             experiment_name:str, env:Environment,
-            n_islands:int = -1, gen_per_island:int = 10):
+            n_islands:int, gen_per_island:int):
     '''Basically the big EA loop'''
     # number of weights for multilayer with 10 hidden neurons
     individual_dims = (env.get_num_sensors()+1)*n_hidden_neurons + (n_hidden_neurons+1)*5
@@ -288,13 +262,15 @@ def islands(popsize:int, max_gen:int, mr:float,
                                       for isl in range(islands.shape[0]))
         
         # Unzip results into evolved islands and best individuals
-        islands_evolved, islands_best = zip(*results)
+        islands_evolved, fitnesses_evoled, islands_best = zip(*results)
         
+        fitnesses_evoled = np.array(fitnesses_evoled)
         islands_evolved = np.array(islands_evolved)
+        # breakpoint()
         islands_best = list(islands_best)
         best_fits = [ib[-1] for ib in islands_best]
         fin = time.time()
-        print(f'Cycle {cycle} best fitness: {max(best_fits)}, t:{fin-ini}')
+        print(f'Cycle {cycle} best fitness: {max(best_fits)}, mean fitness: {np.mean(fitnesses_evoled)},t:{fin-ini}')
         # migrate between islands
         np.random.shuffle(islands_evolved) # get rid of order
         islands = np.array(migration(islands_evolved)).reshape((n_islands,-1, individual_dims))
@@ -356,7 +332,7 @@ def parent_selection(population, fitnesses, env:Environment, n_children = 2):
 
 # Survivor selection with elitism and random diversity preservation
 def survivor_selection(parents, parent_fitnesses, 
-                       offspring, offspring_fitnesses, elite_fraction=0.5):
+                       offspring, offspring_fitnesses, elite_fraction=0.8):
     """Select survivors using elitism with some randomness to maintain diversity."""
     # Combine parents and offspring
     total_population = np.vstack([parents, offspring])
@@ -451,131 +427,6 @@ def uncorrelated_mut_N_sigmas():
 # ToDo: 
 def save_results():
     pass
-
-def basic_ea (popsize:int, max_gen:int, mr:float, cr:float, n_hidden_neurons:int,
-              experiment_name:str, env:Environment, new_evolution:bool = True):
-    ''' Basic evolutionary algorithm to optimize the weights '''
-    # number of weights for multilayer with 10 hidden neurons
-    individual_dims = (env.get_num_sensors()+1)*n_hidden_neurons + (n_hidden_neurons+1)*5
-    # initiation time
-    ini = time.time()
-
-    # Initialize population & calculate fitness
-    gene_limits = [-1.0, 1.0]
-    # starting step size 0.5?
-    sigma_prime = 0.05
-    population = initialize_population(popsize, individual_dims, gene_limits)  
-    fitnesses = evaluate_fitnesses(env, population)
-    solutions = [population, fitnesses]
-    env.update_solutions(solutions)
-
-    # stats
-    mean_fitness = np.mean(fitnesses)
-    std_fitness = np.std(fitnesses)
-
-    # Start tracking best individual
-    best_idx = np.argmax(fitnesses)
-    best_individual = population[best_idx]
-    best_fitness = fitnesses[best_idx]
-
-    # stagnation prevention
-    stagnation = 0
-    starting_mutation_rate, starting_crossover_rate = mr, cr
-
-    # evolution loop
-    for i in range(max_gen):
-        # niching (fitness sharing)
-        shared_fitnesses = fitness_sharing(fitnesses, population, gene_limits)
-        # shared_fitnesses = fitnesses # disables fitness sharing
-        # ?? crowding ??
-        # ?? speciation - islands ??
-
-        # Parent selection: (Tournament? - just first try) Probability based - YES
-        parents, parent_fitnesses = parent_selection(population, shared_fitnesses, env)
-
-        # crossover / recombination: Whole Arithmetic (basic) | Blend Recombination (best)
-        offspring = crossover(parents, cr, blend_recombination)
-        
-        # mutation: Uncorrelated mutation with N step sizes
-        offspring_mutated, sigma_primes = zip(*[uncorrelated_mut_one_sigma(ind, sigma_prime, mr) for ind in offspring])
-        offspring_fitnesses = evaluate_fitnesses(env, offspring_mutated)
-        sigma_prime = sigma_primes[np.argmax(offspring_fitnesses)]
-
-        # Survivor selection with elitism & some randomness
-        population, fitnesses = survivor_selection(parents, parent_fitnesses, 
-                                                   list(offspring_mutated), offspring_fitnesses)
-
-        # Check for best solution
-        best_idx = np.argmax(fitnesses)
-        if fitnesses[best_idx] > best_fitness:
-            best_fitness = fitnesses[best_idx]
-            best_individual = population[best_idx]
-            
-            stagnation = 0 # reset stagnation
-            mr, cr = starting_mutation_rate, starting_crossover_rate
-        
-        else:
-            stagnation += 1
-            mean_fitness = np.mean(fitnesses)
-            std_fitness = np.std(fitnesses)
-            if stagnation < 10:
-                mr += .02
-                cr += 0.03
-                sigma_prime += 0.03
-            elif stagnation >= 10 and stagnation < 20:
-                mr += .03
-                cr += 0.05
-                sigma_prime += 0.06
-            else:
-                # too long stagnation, need new blood
-                new_blood = initialize_population(popsize//3, individual_dims,
-                                                  gene_limits)
-                new_fitnesses = evaluate_fitnesses(env, new_blood)
-
-                # replace a third of population with new blood
-                population[-(popsize // 3):] = new_blood
-                fitnesses[-(popsize // 3):] = new_fitnesses
-    
-                stagnation = 0 # reset stagnation
-                mr, cr = starting_mutation_rate, starting_crossover_rate
-                sigma_prime = 0.05
-                print('-----New Blood!-----')
-
-        # OUTPUT: weights + biases vector
-        # saves results
-        file_aux  = open(experiment_name+'/results.txt','a')
-        # file_aux.write('\n\ngen best mean std sigma_prime mutation_r crossover_r')
-        print( '\n GENERATION '+str(i)+' '+str(round(best_fitness,6))+' '+str(round(mean_fitness,6))+' '+str(round(std_fitness,6))+' '
-              +str(round(sigma_prime, 6))+' '+str(round(mr, 6))+' '+str(round(cr, 6)))
-        file_aux.write('\n'+str(i)+' '+str(round(best_fitness,6))+' '+str(round(mean_fitness,6))+' '+str(round(std_fitness,6))+' '+str(round(sigma_prime, 6))+' '+str(round(mr, 6))+' '+str(round(cr, 6)))
-        file_aux.close()
-
-        # saves generation number
-        file_aux  = open(experiment_name+'/gen.txt','a')
-        file_aux.write(str(i))
-        file_aux.close()
-
-        # saves file with the best solution
-        np.savetxt(experiment_name+'/best.txt',best_individual)
-
-        if not os.path.exists('basic_solutions'):
-            os.makedirs('basic_solutions')
-        np.savetxt(f'basic_solutions/{env.enemyn}best.txt', best_individual)
-
-        # saves simulation state
-        solutions = [population, fitnesses]
-        env.update_solutions(solutions)
-        env.save_state()
-
-    fim = time.time() # prints total execution time for experiment
-    print( '\nExecution time: '+str(round((fim-ini)/60))+' minutes \n')
-    print( '\nExecution time: '+str(round((fim-ini)))+' seconds \n')
-
-
-    file = open(experiment_name+'/neuroended', 'w')  # saves control (simulation has ended) file for bash loop file
-    file.close()
-
-    env.state_to_log() # checks environment state
 
 if __name__ == '__main__':
     main()

@@ -89,10 +89,8 @@ def main():
         basic_ea(popsize, mg, mr, cr, n_hidden, experiment_name,
                  env)
     else:
-        print( '\nCONTINUING EVOLUTION\n')
-        # without initialization & loading
         basic_ea(popsize, mg, mr, cr, n_hidden, experiment_name,
-                 env, new_evolution=False)
+                 env)
 
 # for parallelization later
 # worker_env = None
@@ -217,7 +215,7 @@ def parent_selection(population, fitnesses, env:Environment, n_children = 2):
 
 # Survivor selection with elitism and random diversity preservation
 def survivor_selection(parents, parent_fitnesses, 
-                       offspring, offspring_fitnesses, elite_fraction=0.5):
+                       offspring, offspring_fitnesses, elite_fraction=0.8):
     """Select survivors using elitism with some randomness to maintain diversity."""
     # Combine parents and offspring
     total_population = parents + offspring
@@ -345,28 +343,6 @@ def basic_ea (popsize:int, max_gen:int, mr:float, cr:float, n_hidden_neurons:int
         file_aux.write('\n'+str(ini_g)+' '+str(round(best_fitness,6))+' '+str(round(mean_fitness,6))+' '+str(round(std_fitness,6))+' '+str(round(sigma_prime, 6))+' '+str(round(mr, 6))+' '+str(round(cr, 6)))
         file_aux.close()
 
-    # Loading previous experiment data
-    else:
-        env.load_state()
-        population = env.solutions[0]
-        fitnesses = env.solutions[1]
-        gene_limits = [-1.0, 1.0]
-
-        best_idx = np.argmax(fitnesses)
-        mean_fitness = np.mean(fitnesses)
-        std_fitness = np.std(fitnesses)
-
-        # get sigma_prime, mutation_r & crossover_r
-        results = read_csv(experiment_name + '/results.txt', sep=' ', 
-                           delim_whitespace=True, header=None, skiprows=2)
-        
-        sigma_prime, mr, cr = results.iloc[-1,4:]
-
-        # finds last generation number
-        file_aux  = open(experiment_name+'/gen.txt','r')
-        ini_g = int(file_aux.readline())
-        file_aux.close()
-
     # evolution loop
     for i in range(max_gen):
         # niching (fitness sharing)
@@ -392,46 +368,53 @@ def basic_ea (popsize:int, max_gen:int, mr:float, cr:float, n_hidden_neurons:int
 
         # Check for best solution
         best_idx = np.argmax(fitnesses)
-        if fitnesses[best_idx] > best_fitness:
-            best_fitness = fitnesses[best_idx]
-            best_individual = population[best_idx]
-            mean_fitness = np.mean(fitnesses)
-            std_fitness = np.std(fitnesses)
-            stagnation = 0 # reset stagnation
-            mr, cr = starting_mutation_rate, starting_crossover_rate
+        generational_fitness = fitnesses[best_idx]
+        gen_mean = np.mean(fitnesses)
+        gen_std = np.std(fitnesses)
         
-        else:
-            stagnation += 1
-            if stagnation < 10:
-                mr += .02
-                cr += 0.03
-                sigma_prime += 0.03
-            elif stagnation >= 10 and stagnation < 20:
-                mr += .03
-                cr += 0.05
-                sigma_prime += 0.06
-            else:
-                # too long stagnation, need new blood
-                new_blood = initialize_population(popsize//3, individual_dims,
-                                                  gene_limits)
-                new_fitnesses = evaluate_fitnesses(env, new_blood)
+        best_fitness = fitnesses[best_idx]
+        best_individual = population[best_idx]
+        mean_fitness = np.mean(fitnesses)
+        # if fitnesses[best_idx] > best_fitness:
+        #     best_fitness = fitnesses[best_idx]
+        #     best_individual = population[best_idx]
+        #     mean_fitness = np.mean(fitnesses)
+        #     std_fitness = np.std(fitnesses)
+        #     stagnation = 0 # reset stagnation
+        #     mr, cr = starting_mutation_rate, starting_crossover_rate
+        
+        # else:
+        #     stagnation += 1
+        #     if stagnation < 10:
+        #         mr += .02
+        #         cr += 0.03
+        #         sigma_prime += 0.03
+        #     elif stagnation >= 10 and stagnation < 20:
+        #         mr += .03
+        #         cr += 0.05
+        #         sigma_prime += 0.06
+        #     else:
+        #         # too long stagnation, need new blood
+        #         new_blood = initialize_population(popsize//3, individual_dims,
+        #                                           gene_limits)
+        #         new_fitnesses = evaluate_fitnesses(env, new_blood)
 
-                # replace a third of population with new blood
-                population[-(popsize // 3):] = new_blood
-                fitnesses[-(popsize // 3):] = new_fitnesses
+        #         # replace a third of population with new blood
+        #         population[-(popsize // 3):] = new_blood
+        #         fitnesses[-(popsize // 3):] = new_fitnesses
     
-                stagnation = 0 # reset stagnation
-                mr, cr = starting_mutation_rate, starting_crossover_rate
-                sigma_prime = 0.05
-                print('-----New Blood!-----')
+        #         stagnation = 0 # reset stagnation
+        #         mr, cr = starting_mutation_rate, starting_crossover_rate
+        #         sigma_prime = 0.05
+        #         print('-----New Blood!-----')
 
         # OUTPUT: weights + biases vector
         # saves results
         file_aux  = open(experiment_name+'/results.txt','a')
         # file_aux.write('\n\ngen best mean std sigma_prime mutation_r crossover_r')
-        print( '\n GENERATION '+str(i)+' '+str(round(best_fitness,6))+' '+str(round(mean_fitness,6))+' '+str(round(std_fitness,6))+' '
+        print( '\n GENERATION '+str(i)+' '+str(round(generational_fitness,6))+' '+str(round(gen_mean,6))+' '+str(round(gen_std,6))+' '
               +str(round(sigma_prime, 6))+' '+str(round(mr, 6))+' '+str(round(cr, 6)))
-        file_aux.write('\n'+str(i)+' '+str(round(best_fitness,6))+' '+str(round(mean_fitness,6))+' '+str(round(std_fitness,6))+' '+str(round(sigma_prime, 6))+' '+str(round(mr, 6))+' '+str(round(cr, 6)))
+        file_aux.write('\n'+str(i)+' '+str(round(generational_fitness,6))+' '+str(round(gen_mean,6))+' '+str(round(gen_std,6))+' '+str(round(sigma_prime, 6))+' '+str(round(mr, 6))+' '+str(round(cr, 6)))
         file_aux.close()
 
         # saves generation number
