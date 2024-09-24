@@ -145,7 +145,8 @@ def initialize_population(popsize, individual_dims, gene_limits:list[float, floa
 def vectorized_fitness_sharing(fitnesses: np.ndarray, population: np.ndarray, 
                                gene_limits: tuple[float, float], k=0.15) -> np.ndarray:
     """
-    Vectorized fitness sharing to promote diversity and niche creation.
+    Apply fitness sharing as described in the slide to promote diversity and niche creation.
+    [vectorized for efficiency]
     
     Parameters:
     fitnesses (np.ndarray): Fitness values of the population.
@@ -301,14 +302,6 @@ def vectorized_blend_recombination(p1: np.ndarray, p2: np.ndarray, alpha: float 
 def vectorized_crossover(all_parents: np.ndarray, p_crossover: float, recombination_operator: callable) -> np.ndarray:
     """
     Perform fully vectorized recombination to produce all offspring.
-    
-    Parameters:
-    all_parents (np.ndarray): Array of all parent individuals (shape: (pop_size, num_genes)).
-    p_crossover (float): Probability of crossover.
-    recombination_operator (callable): The recombination operator (e.g., blend recombination).
-    
-    Returns:
-    np.ndarray: Array of offspring individuals (shape: (pop_size, num_genes)).
     """
     # Shuffle the parents to ensure random pairs
     np.random.shuffle(all_parents)
@@ -335,15 +328,10 @@ def vectorized_crossover(all_parents: np.ndarray, p_crossover: float, recombinat
 
 def vectorized_uncorrelated_mut_one_sigma(individual: np.ndarray, sigma: float, mutation_rate: float) -> tuple[np.ndarray, float]:
     """
-    Vectorized uncorrelated mutation with one step size.
-    
-    Parameters:
-    individual (np.ndarray): Array representing an individual's genotype.
-    sigma (float): Current mutation step size.
-    mutation_rate (float): The mutation rate for the individual.
-
-    Returns:
-    tuple: Mutated individual and the new sigma_prime.
+    Apply uncorrelated mutation with one step size [vectorized for efficiency]
+    tau = 1/sqrt(n), n = problem size
+	SD' = SD * e**(N(0,tau))
+    x'i = xi + SD' * N(0,1) 
     """
     # Calculate the tau parameter
     tau = 1 / np.sqrt(len(individual))
@@ -365,7 +353,9 @@ def vectorized_uncorrelated_mut_one_sigma(individual: np.ndarray, sigma: float, 
 
 def basic_ea (popsize:int, max_gen:int, mr:float, cr:float, n_hidden_neurons:int,
               experiment_name:str, env:Environment, new_evolution:bool = True):
-    ''' Basic evolutionary algorithm to optimize the weights '''
+    ''' 
+    Basic evolutionary algorithm to optimize the weights 
+    '''
     # number of weights for multilayer with 10 hidden neurons
     individual_dims = (env.get_num_sensors()+1)*n_hidden_neurons + (n_hidden_neurons+1)*5
     # initiation time

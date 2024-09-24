@@ -1,0 +1,31 @@
+
+
+cycle best mean std
+0 89.218586 27.906537 6.981341
+
+cycle best mean std
+1 85.586285 27.284064 6.086974
+
+cycle best mean std
+2 65.767552 26.977084 6.962419
+
+cycle best mean std
+3 74.79141 34.968332 15.854865
+
+cycle best mean std
+4 88.531574 41.656313 18.808091
+
+cycle best mean std
+5 88.59141 45.174691 21.179854
+
+cycle best mean std
+6 89.099681 47.969005 27.922107
+
+cycle best mean std
+7 89.157367 57.380727 20.563372
+
+cycle best mean std
+8 90.329262 58.460263 21.573586
+
+cycle best mean std
+9 88.613791 66.1813 18.960341
