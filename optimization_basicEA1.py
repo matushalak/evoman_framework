@@ -25,7 +25,7 @@ def parse_args():
     # Define arguments
     parser.add_argument('-name', '--exp_name', type=str, required=False, help="Experiment name")
     parser.add_argument('-pop', '--popsize', type=int, required=False, default = 100, help="Population size (eg. 100)")
-    parser.add_argument('-mg', '--maxgen', type=int, required=False, default = 500, help="Max generations (eg. 500)")
+    parser.add_argument('-mg', '--maxgen', type=int, required=False, default = 50, help="Max generations (eg. 500)")
     parser.add_argument('-cr', '--crossover_rate', type=float, required=False, default = 0.5, help="Crossover rate (e.g., 0.8)")
     parser.add_argument('-mr', '--mutation_rate', type=float, required=False, default = 0.1, help="Mutation rate (e.g., 0.05)")
     parser.add_argument('-nh', '--nhidden', type=int, required=False, default = 10, help="Number of Hidden Neurons (eg. 10)")
@@ -425,13 +425,18 @@ def basic_ea (popsize:int, max_gen:int, mr:float, cr:float, n_hidden_neurons:int
                 sigma_prime = 0.05
                 print('-----New Blood!-----')
 
+        # calculate the gain for the best solution:
+        f, pl, el, t = run_game(env, best_individual, test = True)
+        gain = pl-el
+
         # OUTPUT: weights + biases vector
         # saves results
         file_aux  = open(experiment_name+'/results.txt','a')
         # file_aux.write('\n\ngen best mean std sigma_prime mutation_r crossover_r')
         print( '\n GENERATION '+str(i)+' '+str(round(best_fitness,6))+' '+str(round(mean_fitness,6))+' '+str(round(std_fitness,6))+' '
-              +str(round(sigma_prime, 6))+' '+str(round(mr, 6))+' '+str(round(cr, 6)))
-        file_aux.write('\n'+str(i)+' '+str(round(best_fitness,6))+' '+str(round(mean_fitness,6))+' '+str(round(std_fitness,6))+' '+str(round(sigma_prime, 6))+' '+str(round(mr, 6))+' '+str(round(cr, 6)))
+              +str(round(sigma_prime, 6))+' '+str(round(mr, 6))+' '+str(round(cr, 6))+' '+str(round(gain, 6)))
+        file_aux.write('\n'+str(i)+' '+str(round(best_fitness,6))+' '+str(round(mean_fitness,6))+' '+str(round(std_fitness,6))
+                       +' '+str(round(sigma_prime, 6))+' '+str(round(mr, 6))+' '+str(round(cr, 6)) +' '+str(round(cr, 6))+' '+str(round(gain, 6)))
         file_aux.close()
 
         # saves generation number
