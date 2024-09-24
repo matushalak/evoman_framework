@@ -19,7 +19,7 @@ def main():
         os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 
-    experiment_name = 'optimization_test'
+    experiment_name = 'fluctuation_test'
     if not os.path.exists(experiment_name):
         os.makedirs(experiment_name)
 
@@ -27,7 +27,7 @@ def main():
 
     # initializes simulation in individual evolution mode, for single static enemy.
     env = Environment(experiment_name=experiment_name,
-                    enemies=[2],
+                    enemies=[4],
                     playermode="ai",
                     player_controller=player_controller(n_hidden_neurons), # you  can insert your own controller here
                     enemymode="static",
@@ -44,7 +44,7 @@ def main():
     dom_u = 1
     dom_l = -1
     npop = 100
-    max_gen = 30
+    max_gen = 100
     mutation_rate = 0.2
     last_best = 0
     settings = (dom_u, dom_l, npop, max_gen, mutation_rate, last_best, n_vars)
@@ -67,13 +67,14 @@ def EA_task1_function(settings, env):
 
     # initialize population. TO DO: add option to use previous populations
     population, fitness_pop, fitness_mean, fitness_std  = initialize_pop(dom_l, dom_u, npop, n_vars, env)
+    best_index = np.argmax(fitness_pop)
 
     # perform iterations (go through the generations)
     for i in range(max_gen):
 
         # initialize next gen:
         parents = initialize_next_gen(population, fitness_pop)
-        print(parents.shape)
+        #print(parents.shape)
 
         # keep the best parent profile? Elitism --> later
 
@@ -85,16 +86,22 @@ def EA_task1_function(settings, env):
 
         # evaluate fitness
         fitness_children = evaluate(env, children)
+        
+        # Elitism: Replace the worst individual in the children with the best from the previous generation
+        worst_index = np.argmin(fitness_children)
+        children[worst_index] = population[best_index]
+        fitness_children[worst_index] = fitness_pop[best_index]
 
         # update generation (replacement)
         population = children
         fitness_pop = fitness_children
 
-    best_index = np.argmax(fitness_pop)
-    best_individual = population[best_index]
-    print(f'Best indivual array: {best_individual}')
-    print(f"Best individual found with fitness: {fitness_pop[best_index]}")
 
+        best_index = np.argmax(fitness_pop)
+        #best_individual = population[best_index]
+        #print(f'Best indivual array: {best_individual}')
+        fitness_mean = np.mean(fitness_pop)
+        print(f"Generation: {i}, fitness: {fitness_pop[best_index]}, mean {fitness_mean}")
 
     # final best result:
 
