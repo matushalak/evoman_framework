@@ -25,7 +25,7 @@ def parse_args():
     # Define arguments
     parser.add_argument('-name', '--exp_name', type=str, required=False, help="Experiment name")
     parser.add_argument('-pop', '--popsize', type=int, required=False, default = 100, help="Population size (eg. 100)")
-    parser.add_argument('-mg', '--maxgen', type=int, required=False, default = 50, help="Max generations (eg. 500)")
+    parser.add_argument('-mg', '--maxgen', type=int, required=False, default = 500, help="Max generations (eg. 500)")
     parser.add_argument('-cr', '--crossover_rate', type=float, required=False, default = 0.5, help="Crossover rate (e.g., 0.8)")
     parser.add_argument('-mr', '--mutation_rate', type=float, required=False, default = 0.1, help="Mutation rate (e.g., 0.05)")
     parser.add_argument('-nh', '--nhidden', type=int, required=False, default = 10, help="Number of Hidden Neurons (eg. 10)")
@@ -412,13 +412,13 @@ def basic_ea (popsize:int, max_gen:int, mr:float, cr:float, n_hidden_neurons:int
                 sigma_prime += 0.06
             else:
                 # too long stagnation, need new blood
-                new_blood = initialize_population(popsize//2, individual_dims,
+                new_blood = initialize_population(popsize//3, individual_dims,
                                                   gene_limits)
                 new_fitnesses = evaluate_fitnesses(env, new_blood)
 
                 # replace a third of population with new blood
-                population[-(popsize // 2):] = new_blood
-                fitnesses[-(popsize // 2):] = new_fitnesses
+                population[-(popsize // 3):] = new_blood
+                fitnesses[-(popsize // 3):] = new_fitnesses
     
                 stagnation = 0 # reset stagnation
                 mr, cr = starting_mutation_rate, starting_crossover_rate
@@ -428,7 +428,7 @@ def basic_ea (popsize:int, max_gen:int, mr:float, cr:float, n_hidden_neurons:int
         # OUTPUT: weights + biases vector
         # saves results
         file_aux  = open(experiment_name+'/results.txt','a')
-        file_aux.write('\n\ngen best mean std sigma_prime mutation_r crossover_r')
+        # file_aux.write('\n\ngen best mean std sigma_prime mutation_r crossover_r')
         print( '\n GENERATION '+str(i)+' '+str(round(best_fitness,6))+' '+str(round(mean_fitness,6))+' '+str(round(std_fitness,6))+' '
               +str(round(sigma_prime, 6))+' '+str(round(mr, 6))+' '+str(round(cr, 6)))
         file_aux.write('\n'+str(i)+' '+str(round(best_fitness,6))+' '+str(round(mean_fitness,6))+' '+str(round(std_fitness,6))+' '+str(round(sigma_prime, 6))+' '+str(round(mr, 6))+' '+str(round(cr, 6)))
@@ -441,6 +441,10 @@ def basic_ea (popsize:int, max_gen:int, mr:float, cr:float, n_hidden_neurons:int
 
         # saves file with the best solution
         np.savetxt(experiment_name+'/best.txt',best_individual)
+
+        if not os.path.exists('basic_solutions'):
+            os.makedirs('basic_solutions')
+        np.savetxt(f'basic_solutions/{env.enemyn}best.txt', best_individual)
 
         # saves simulation state
         solutions = [population, fitnesses]
