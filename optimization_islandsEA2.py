@@ -6,6 +6,9 @@
 # GOALS: also implement uncorrelated mutation with N sigmas!!! (put also in basic script)
 # Figure out how to use numpy arrays preferably
 # save results with a function
+
+# good parameters: pop 100/120/140/150; nislands 4/5/6/7 gpi 10/20 mr .6 cr.3 ()
+# python optimization_islandsEA2.py -nme 7 -pop 120 -mg 100 -name test -mr .6 -cr .3 -gpi 10 -nislands 5  
 ###############################################################################
 
 # imports framework
@@ -255,6 +258,7 @@ def islands(popsize:int, max_gen:int, mr:float,
     contr = env.player_controller
     enemies = env.enemies
     all_gen_res = []
+    best, bf = [], 0
     for cycle in range(max_gen//gen_per_island):
         # Parallelize island life across islands
         results = Parallel(n_jobs=-1)(delayed(parallel_island_life)(islands[isl, :, :], gen_per_island, name, contr, enemies, mr, cr) 
@@ -274,7 +278,10 @@ def islands(popsize:int, max_gen:int, mr:float,
         fin = time.time()
         gain, diversity = gain_diversity(env, islands_best[i_best][0] ,islands_evolved)
         print(f'Cycle {cycle} best fitness: {islands_best[i_best][-1]}, mean fitness: {np.mean(fitnesses_evoled)}, SD fitness: {np.std(fitnesses_evoled)} , DIVERSITY: {diversity} , t:{fin-ini}')
-        np.savetxt(experiment_name+'/alltime.txt',islands_best[i_best][0])
+        if islands_best[i_best][-1] > bf:
+            best = islands_best[i_best][0]
+            bf = islands_best[i_best][-1]
+            np.savetxt(experiment_name+'/alltime.txt',best)
         # migrate between islands
         np.random.shuffle(islands_evolved) # get rid of order
         islands = np.array(vectorized_migration(islands_evolved)).reshape((n_islands,-1, individual_dims))
