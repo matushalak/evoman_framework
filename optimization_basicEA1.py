@@ -401,7 +401,7 @@ def basic_ea (popsize:int, max_gen:int, mr:float, cr:float, n_hidden_neurons:int
 
         # for self-adaptivity
         starting_mutation_rate, starting_crossover_rate = mr, cr
-        elite_fraction, starting_elite_fraction = 0.5, 0.5
+        elite_fraction, starting_elite_fraction = 0.8, 0.8
 
         gain, diversity = gain_diversity(env, best_individual, population)
         # saves results for first pop
