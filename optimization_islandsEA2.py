@@ -20,7 +20,6 @@ import numpy as np
 import os
 import argparse
 from joblib import Parallel, delayed
-from concurrent.futures import ThreadPoolExecutor
 from pandas import read_csv
 
 def parse_args():
@@ -165,7 +164,7 @@ def island_life(island, generations_per_island,env, mr, cr):
     
     sigma_prime = .05
     # Gen, Best Fit, Mean Fit, SD Fit
-    gen_data = []
+    gen_fits, gen_pops = [], []
     for g in range(generations_per_island):
         # niching
         shared_fit = vectorized_fitness_sharing(fit, pop, [-1.0, 1.0]) # np 1d array popsize
@@ -190,11 +189,14 @@ def island_life(island, generations_per_island,env, mr, cr):
         best_fitness = fit[best_idx]
         best_individual = pop[best_idx,:]
 
+        # get every generation & its fitnesses
+        gen_fits.append(fit)
+        gen_pops.append(pop)
         if best_fitness > all_time[-1]:
             all_time = (best_individual, best_fitness)
         
     np.reshape(pop, (1,popsize, indsize)) # back to island format
-    return pop, fit, all_time
+    return pop, fit, all_time, gen_fits, gen_pops
 
 def vectorized_migration(islands: np.ndarray, N: int = 5) -> np.ndarray:
     """
@@ -231,11 +233,10 @@ def gain_diversity(env, best_sol, population_genes):
     gain = pl - el
 
     # Diversity: rows = individuals, columns = genes
-    genewise_stds = np.std(population_genes, axis = 2) # per gene, across individuals
-    island_wise_diversity = np.mean(genewise_stds, axis = 1)
-    diversity = np.mean(island_wise_diversity)
+    genewise_stds = np.std(population_genes, axis = 1) # per gene, across individuals
+    diversity = np.mean(genewise_stds)
 
-    return gain, diversity, island_wise_diversity
+    return gain, diversity
 
 def islands(popsize:int, max_gen:int, mr:float, 
             cr:float, n_hidden_neurons:int,
@@ -253,14 +254,18 @@ def islands(popsize:int, max_gen:int, mr:float,
     name  = env.experiment_name
     contr = env.player_controller
     enemies = env.enemies
+    all_gen_res = []
     for cycle in range(max_gen//gen_per_island):
         # Parallelize island life across islands
         results = Parallel(n_jobs=-1)(delayed(parallel_island_life)(islands[isl, :, :], gen_per_island, name, contr, enemies, mr, cr) 
                                       for isl in range(islands.shape[0]))
         
         # Unzip results into evolved islands and best individuals
-        islands_evolved, fitnesses_evoled, islands_best = zip(*results)
-        
+        islands_evolved, fitnesses_evoled, islands_best, gen_fits, gen_pops = zip(*results)
+        breakpoint()
+
+        # gen data = 5 islands x N generations / island x Island population
+        all_gen_res.append(process_gen_data(gen_fits, gen_pops, cycle))
         fitnesses_evoled = np.array(fitnesses_evoled)
         islands_evolved = np.array(islands_evolved)
         # breakpoint()
@@ -269,19 +274,39 @@ def islands(popsize:int, max_gen:int, mr:float,
         i_best = np.argmax(best_fits)
         
         fin = time.time()
-        gain, diversity, islands_diversity = gain_diversity(env, islands_best[i_best][0] ,islands_evolved)
+        gain, diversity = gain_diversity(env, islands_best[i_best][0] ,islands_evolved)
         print(f'Cycle {cycle} best fitness: {islands_best[i_best][-1]}, mean fitness: {np.mean(fitnesses_evoled)}, SD fitness: {np.std(fitnesses_evoled)} , DIVERSITY: {diversity} , t:{fin-ini}')
-
+        np.savetxt(experiment_name+'/alltime.txt',islands_best[i_best][0])
         # migrate between islands
         np.random.shuffle(islands_evolved) # get rid of order
         islands = np.array(vectorized_migration(islands_evolved)).reshape((n_islands,-1, individual_dims))
-
+    
+    save_results(all_gen_res, experiment_name)
     return islands_best
     # run second half of generations in normal evolutionary mode (mixing everyone together)
-    # (more advanced - put different individuals into different islands)
-    # for gen in range(max_gen//2):
-    #     # normal evolution
-    #     pass
+
+def process_gen_data(gen_fits, gen_pops, cycle):
+    '''
+    Want to get data / generation across all islands
+    '''
+    # gen fits = n islands x N generations / island x Island population
+    # eg. 5 : 10 : 20
+    # max, mean std diversity
+    gens_fits = np.array(gen_fits)
+    gens_pops = np.array(gen_pops)
+    # maxes
+    gen_maxes = np.max(gens_fits, axis = 2).max(axis = 0) # 10 values
+    # mean
+    gen_means = np.mean(gens_fits, axis = 2).mean(axis = 0) # 10 values
+    # stds
+    gen_stds = np.std(gens_fits, axis = 2).std(axis = 0) # 10 values
+    # Diversity (ISLANDS 4D): island : generation : individuals : gene 
+    genewise_stds = np.std(gens_pops, axis = 2) # per gene, across individuals
+    diversity = np.mean(genewise_stds, axis = 2).mean(axis = 0) # 10 values
+
+    rows = np.arange(round(0+diversity.shape[0]*cycle), 
+                     round(diversity.shape[0]+diversity.shape[0]*cycle))
+    return np.hstack(rows, gen_maxes, gen_means, gen_stds, diversity)
 
 # promoting diversity
 def vectorized_fitness_sharing(fitnesses: np.ndarray, population: np.ndarray, 
@@ -465,14 +490,9 @@ def vectorized_uncorrelated_mut_one_sigma(individual: np.ndarray, sigma: float,
     return mutated_individual, sigma_prime
 
 # ToDo: 
-def save_results(gen_data):
-        print( '\n GENERATION '+str(ini_g)+' '+str(round(best_fitness,6))+' '+str(round(mean_fitness,6))+' '+str(round(std_fitness,6))+' '
-              +str(round(gain, 6))+' '+str(round(diversity, 6)))
-        
-        save_file = open(experiment_name+'/results.txt','a')
-        save_file.write('\n\ncycle best mean std')
-        save_file.write('\n'+str(cycle)+' '+str(round(islands_best[i_best][-1],6))+' '+str(round(np.mean(fitnesses_evoled),6))+' '+str(round(np.std(fitnesses_evoled),6)))
-        np.savetxt(experiment_name+'/best.txt',islands_best[i_best][0])
+def save_results(all_gen_res, experiment_name):
+        res = np.vstack(all_gen_res)
+        np.savetxt(experiment_name+'/results.txt',res, header="gen best mean std diversity")
 
 if __name__ == '__main__':
     main()
