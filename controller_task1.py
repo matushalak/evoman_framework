@@ -27,7 +27,10 @@ all_best = False
 args = parse_args()
 if isinstance(args.results, str):
 	exp_dir = args.results
-	solution = exp_dir + '/best.txt'
+	if 'alltime.txt' in os.listdir(exp_dir):
+		solution = exp_dir + '/alltime.txt'
+	else:
+		solution = exp_dir + '/best.txt'
 else:
     exp_dir = 'basic_solutions'
     solutions = os.listdir(exp_dir)

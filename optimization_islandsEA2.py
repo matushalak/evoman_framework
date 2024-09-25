@@ -262,13 +262,11 @@ def islands(popsize:int, max_gen:int, mr:float,
         
         # Unzip results into evolved islands and best individuals
         islands_evolved, fitnesses_evoled, islands_best, gen_fits, gen_pops = zip(*results)
-        breakpoint()
 
         # gen data = 5 islands x N generations / island x Island population
         all_gen_res.append(process_gen_data(gen_fits, gen_pops, cycle))
         fitnesses_evoled = np.array(fitnesses_evoled)
         islands_evolved = np.array(islands_evolved)
-        # breakpoint()
         islands_best = list(islands_best)
         best_fits = [ib[-1] for ib in islands_best]
         i_best = np.argmax(best_fits)
@@ -306,7 +304,8 @@ def process_gen_data(gen_fits, gen_pops, cycle):
 
     rows = np.arange(round(0+diversity.shape[0]*cycle), 
                      round(diversity.shape[0]+diversity.shape[0]*cycle))
-    return np.hstack(rows, gen_maxes, gen_means, gen_stds, diversity)
+
+    return np.vstack([rows, gen_maxes, gen_means, gen_stds, diversity]).T
 
 # promoting diversity
 def vectorized_fitness_sharing(fitnesses: np.ndarray, population: np.ndarray, 
@@ -373,7 +372,6 @@ def vectorized_parent_selection(population, fitnesses, env: Environment, n_child
     
     # Vectorized fitness evaluation of selected parents
     f_parents = evaluate_fitnesses(env, g_parents)
-    # breakpoint()
     return g_parents, f_parents
 
 # Survivor selection with elitism and random diversity preservation
@@ -490,9 +488,9 @@ def vectorized_uncorrelated_mut_one_sigma(individual: np.ndarray, sigma: float,
     return mutated_individual, sigma_prime
 
 # ToDo: 
-def save_results(all_gen_res, experiment_name):
-        res = np.vstack(all_gen_res)
-        np.savetxt(experiment_name+'/results.txt',res, header="gen best mean std diversity")
+def save_results(res, experiment_name):
+        res = np.vstack(res)
+        np.savetxt(experiment_name+'/results.txt',res, header="gen best mean std diversity", fmt = '%.6f')
 
 if __name__ == '__main__':
     main()
