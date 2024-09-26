@@ -351,6 +351,21 @@ def vectorized_uncorrelated_mut_one_sigma(individual: np.ndarray, sigma: float, 
 
     return mutated_individual, sigma_prime
 
+def gain_diversity(env, best_sol, population_genes):
+    '''
+    Obtains gain for best solution in a generation and population diversity of a given generation (average genewise STD)
+    '''
+    # Gain
+    _, pl, el, _ = run_game(env,best_sol, test=True)
+    gain = pl - el
+
+    # Diversity: rows = individuals, columns = genes
+    genewise_stds = np.std(population_genes, axis = 0) # per gene, across individuals
+    diversity = np.mean(genewise_stds)
+
+    return gain, diversity
+
+
 def basic_ea (popsize:int, max_gen:int, mr:float, cr:float, n_hidden_neurons:int,
               experiment_name:str, env:Environment, new_evolution:bool = True):
     ''' 
@@ -384,16 +399,17 @@ def basic_ea (popsize:int, max_gen:int, mr:float, cr:float, n_hidden_neurons:int
 
         all_time = best_individual, best_fitness
 
-        # stagnation prevention
-        stagnation = 0
+        # for self-adaptivity
         starting_mutation_rate, starting_crossover_rate = mr, cr
+        elite_fraction, starting_elite_fraction = 0.8, 0.8
 
+        gain, diversity = gain_diversity(env, best_individual, population)
         # saves results for first pop
         file_aux  = open(experiment_name+'/results.txt','a')
-        file_aux.write('\n\ngen best mean std sigma_prime mutation_r crossover_r')
+        file_aux.write('\n\ngen best mean std gain diversity')
         print( '\n GENERATION '+str(ini_g)+' '+str(round(best_fitness,6))+' '+str(round(mean_fitness,6))+' '+str(round(std_fitness,6))+' '
-              +str(round(sigma_prime, 6))+' '+str(round(mr, 6))+' '+str(round(cr, 6)))
-        file_aux.write('\n'+str(ini_g)+' '+str(round(best_fitness,6))+' '+str(round(mean_fitness,6))+' '+str(round(std_fitness,6))+' '+str(round(sigma_prime, 6))+' '+str(round(mr, 6))+' '+str(round(cr, 6)))
+              +str(round(gain, 6))+' '+str(round(diversity, 6)))
+        file_aux.write('\n'+str(ini_g)+' '+str(round(best_fitness,6))+' '+str(round(mean_fitness,6))+' '+str(round(std_fitness,6))+' '+str(round(gain, 6))+' '+str(round(diversity, 6)))
         file_aux.close()
 
     # evolution loop
@@ -421,7 +437,7 @@ def basic_ea (popsize:int, max_gen:int, mr:float, cr:float, n_hidden_neurons:int
 
         # Survivor selection with elitism & some randomness
         population, fitnesses = survivor_selection(parents, parent_fitnesses, 
-                                                   list(offspring_mutated), offspring_fitnesses)
+                                                   list(offspring_mutated), offspring_fitnesses,elite_fraction)
 
         # Check for best solution
         best_idx = np.argmax(fitnesses)
@@ -429,9 +445,35 @@ def basic_ea (popsize:int, max_gen:int, mr:float, cr:float, n_hidden_neurons:int
         gen_mean = np.mean(fitnesses)
         gen_std = np.std(fitnesses)
         
+        # self adaptive to promote exploitation, TOO much exploration atm
+        # if generational_fitness > 80.0:
+        #     mr = .01
+        #     cr = .2
+        # elif generational_fitness > 85:
+        #     mr = .0075
+        #     cr = .175
+        #     elite_fraction = .85
+        # elif generational_fitness > 90:
+        #     mr = .005
+        #     cr = .1
+        # elif generational_fitness > 92:
+        #     mr = .0025
+        #     cr = .05
+        #     elite_fraction = .9
+        # else:
+        #     mr, cr = starting_mutation_rate, starting_crossover_rate 
+        #     elite_fraction = starting_elite_fraction
+
         best_fitness = fitnesses[best_idx]
         best_individual = population[best_idx]
 
+        # stats
+        mean_fitness = np.mean(fitnesses)
+        std_fitness = np.std(fitnesses)
+
+        # update gain & diversity
+        gain, diversity = gain_diversity(env, best_individual, population)        
+    
         if best_fitness > all_time[-1]:
             all_time = (best_individual, best_fitness)
 
@@ -440,8 +482,8 @@ def basic_ea (popsize:int, max_gen:int, mr:float, cr:float, n_hidden_neurons:int
         file_aux  = open(experiment_name+'/results.txt','a')
         # file_aux.write('\n\ngen best mean std sigma_prime mutation_r crossover_r')
         print( '\n GENERATION '+str(i)+' '+str(round(generational_fitness,6))+' '+str(round(gen_mean,6))+' '+str(round(gen_std,6))+' '
-              +str(round(sigma_prime, 6))+' '+str(round(mr, 6))+' '+str(round(cr, 6)))
-        file_aux.write('\n'+str(i)+' '+str(round(generational_fitness,6))+' '+str(round(gen_mean,6))+' '+str(round(gen_std,6))+' '+str(round(sigma_prime, 6))+' '+str(round(mr, 6))+' '+str(round(cr, 6)))
+              +str(round(gain, 6))+' '+str(round(diversity, 6)))
+        file_aux.write('\n'+str(i)+' '+str(round(generational_fitness,6))+' '+str(round(gen_mean,6))+' '+str(round(gen_std,6))+' '+str(round(gain, 6))+' '+str(round(diversity, 6)))
         file_aux.close()
 
         # saves generation number

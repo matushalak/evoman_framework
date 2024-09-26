@@ -6,6 +6,9 @@
 # GOALS: also implement uncorrelated mutation with N sigmas!!! (put also in basic script)
 # Figure out how to use numpy arrays preferably
 # save results with a function
+
+# good parameters: pop 100/120/140/150; nislands 4/5/6/7 gpi 10/20 mr .6 cr.3 ()
+# python optimization_islandsEA2.py -nme 7 -pop 120 -mg 100 -name test -mr .6 -cr .3 -gpi 10 -nislands 5  
 ###############################################################################
 
 # imports framework
@@ -20,7 +23,6 @@ import numpy as np
 import os
 import argparse
 from joblib import Parallel, delayed
-from concurrent.futures import ThreadPoolExecutor
 from pandas import read_csv
 
 def parse_args():
@@ -37,6 +39,8 @@ def parse_args():
     parser.add_argument('-nh', '--nhidden', type=int, required=False, default = 10, help="Number of Hidden Neurons (eg. 10)")
     parser.add_argument('-tst', '--test', type=bool, required=False, default = False, help="Train or Test (default = Train)")
     parser.add_argument('-nme', '--enemy', type=int, required=False, default = 2, help="Select Enemy")
+    parser.add_argument('-nislands','--nislands', type = int, required = False, default = 5, help = 'Select number of islands')
+    parser.add_argument('-gpi', '--gen_per_isl', type = int, required=False, default=10, help='Generations / island')
 
     return parser.parse_args()
 
@@ -50,6 +54,8 @@ def main():
     mr = args.mutation_rate
     n_hidden = args.nhidden
     enemy = args.enemy
+    nislands = args.nislands
+    gpi = args.gen_per_isl
 
     if isinstance(args.exp_name, str):
         experiment_name = 'islands_' + args.exp_name
@@ -93,7 +99,7 @@ def main():
         print( '\nNEW EVOLUTION\n')
         # with initialization
         evol_exp = islands(popsize, mg, mr, cr, n_hidden, experiment_name,
-                            env, n_islands=5, gen_per_island=20)
+                            env, n_islands=nislands, gen_per_island=gpi)
 
 # for parallelization later
 # worker_env = None
@@ -139,14 +145,6 @@ def run_game_in_worker(name, contr, enemies, ind):
     worker_env = initialize_env(name, contr, enemies)
     return run_game(worker_env, ind)
 
-# initializes random population of candidate solutions
-def initialize_population(popsize, individual_dims, gene_limits:list[float, float]):
-    ''' Generate a population of 
-        N = popsize solutions, each solution containing
-        N = individual_dims genes, each gene within <gene_limits>'''
-    population = np.random.uniform(*gene_limits, (popsize, individual_dims))
-    return population
-
 # def speciation
 def make_islands(n_islands:int, popsize:int, ind_size:int):
     if popsize % n_islands != 0 or popsize <= 0:
@@ -154,7 +152,7 @@ def make_islands(n_islands:int, popsize:int, ind_size:int):
     # islands = np_array (rows = islands, columns = individuals, depth = genes)
     return np.random.uniform(-1.0,1.0,(n_islands, popsize//n_islands, ind_size))
   
-def island_life(island, generations_per_island,env, mr = .1, cr = .6):
+def island_life(island, generations_per_island,env, mr, cr):
     # island is a 3D array - 1(island) x popsize x n_genes
     popsize, indsize = island.shape[-2:]
     pop = np.reshape(island,(popsize, indsize)) # np 2D array popsize x n_genes
@@ -168,6 +166,8 @@ def island_life(island, generations_per_island,env, mr = .1, cr = .6):
     all_time = (best_individual, best_fitness)
     
     sigma_prime = .05
+    # Gen, Best Fit, Mean Fit, SD Fit
+    gen_fits, gen_pops = [], []
     for g in range(generations_per_island):
         # niching
         shared_fit = vectorized_fitness_sharing(fit, pop, [-1.0, 1.0]) # np 1d array popsize
@@ -192,11 +192,14 @@ def island_life(island, generations_per_island,env, mr = .1, cr = .6):
         best_fitness = fit[best_idx]
         best_individual = pop[best_idx,:]
 
+        # get every generation & its fitnesses
+        gen_fits.append(fit)
+        gen_pops.append(pop)
         if best_fitness > all_time[-1]:
             all_time = (best_individual, best_fitness)
         
     np.reshape(pop, (1,popsize, indsize)) # back to island format
-    return pop, fit, all_time
+    return pop, fit, all_time, gen_fits, gen_pops
 
 def vectorized_migration(islands: np.ndarray, N: int = 5) -> np.ndarray:
     """
@@ -217,18 +220,26 @@ def vectorized_migration(islands: np.ndarray, N: int = 5) -> np.ndarray:
     
     return islands
 
-# TODO if time
-def redistribute_to_islands(population_together):
-    ''''More advanced - redistribute evolved population to different islands
-    eg. based on Euclidian Distance'''
-    pass
-
 # Define a wrapper for parallelization (joblib)
 def parallel_island_life(island_slice, gen_per_island,
-                         name, contr, enemies):
+                         name, contr, enemies, mr, cr):
     # Reinitialize or avoid non-picklable objects inside this function if needed
     env = initialize_env(name, contr, enemies)  # Re-initialize the environment inside each worker if necessary
-    return island_life(island_slice, gen_per_island, env)
+    return island_life(island_slice, gen_per_island, env, mr, cr)
+
+def gain_diversity(env, best_sol, population_genes):
+    '''
+    Obtains gain for best solution in a generation and population diversity of a given generation (average genewise STD)
+    '''
+    # Gain
+    _, pl, el, _ = run_game(env,best_sol, test=True)
+    gain = pl - el
+
+    # Diversity: rows = individuals, columns = genes
+    genewise_stds = np.std(population_genes, axis = 1) # per gene, across individuals
+    diversity = np.mean(genewise_stds)
+
+    return gain, diversity
 
 def islands(popsize:int, max_gen:int, mr:float, 
             cr:float, n_hidden_neurons:int,
@@ -246,38 +257,62 @@ def islands(popsize:int, max_gen:int, mr:float,
     name  = env.experiment_name
     contr = env.player_controller
     enemies = env.enemies
+    all_gen_res = []
+    best, bf = [], 0
     for cycle in range(max_gen//gen_per_island):
         # Parallelize island life across islands
-        results = Parallel(n_jobs=-1)(delayed(parallel_island_life)(islands[isl, :, :], gen_per_island, name, contr, enemies) 
+        results = Parallel(n_jobs=-1)(delayed(parallel_island_life)(islands[isl, :, :], gen_per_island, name, contr, enemies, mr, cr) 
                                       for isl in range(islands.shape[0]))
         
         # Unzip results into evolved islands and best individuals
-        islands_evolved, fitnesses_evoled, islands_best = zip(*results)
-        
+        islands_evolved, fitnesses_evoled, islands_best, gen_fits, gen_pops = zip(*results)
+
+        # gen data = 5 islands x N generations / island x Island population
+        all_gen_res.append(process_gen_data(gen_fits, gen_pops, cycle))
         fitnesses_evoled = np.array(fitnesses_evoled)
         islands_evolved = np.array(islands_evolved)
-        # breakpoint()
         islands_best = list(islands_best)
         best_fits = [ib[-1] for ib in islands_best]
         i_best = np.argmax(best_fits)
         
         fin = time.time()
-        print(f'Cycle {cycle} best fitness: {islands_best[i_best][-1]}, mean fitness: {np.mean(fitnesses_evoled)},t:{fin-ini}')
-        save_file = open(experiment_name+'/results.txt','a')
-        save_file.write('\n\ncycle best mean std')
-        save_file.write('\n'+str(cycle)+' '+str(round(islands_best[i_best][-1],6))+' '+str(round(np.mean(fitnesses_evoled),6))+' '+str(round(np.std(fitnesses_evoled),6)))
-        np.savetxt(experiment_name+'/best.txt',islands_best[i_best][0])
-
+        gain, diversity = gain_diversity(env, islands_best[i_best][0] ,islands_evolved)
+        print(f'Cycle {cycle} best fitness: {islands_best[i_best][-1]}, mean fitness: {np.mean(fitnesses_evoled)}, SD fitness: {np.std(fitnesses_evoled)} , DIVERSITY: {diversity} , t:{fin-ini}')
+        if islands_best[i_best][-1] > bf:
+            best = islands_best[i_best][0]
+            bf = islands_best[i_best][-1]
+            np.savetxt(experiment_name+'/alltime.txt',best)
         # migrate between islands
         np.random.shuffle(islands_evolved) # get rid of order
         islands = np.array(vectorized_migration(islands_evolved)).reshape((n_islands,-1, individual_dims))
-
+    
+    save_results(all_gen_res, experiment_name)
     return islands_best
     # run second half of generations in normal evolutionary mode (mixing everyone together)
-    # (more advanced - put different individuals into different islands)
-    # for gen in range(max_gen//2):
-    #     # normal evolution
-    #     pass
+
+def process_gen_data(gen_fits, gen_pops, cycle):
+    '''
+    Want to get data / generation across all islands
+    '''
+    # gen fits = n islands x N generations / island x Island population
+    # eg. 5 : 10 : 20
+    # max, mean std diversity
+    gens_fits = np.array(gen_fits)
+    gens_pops = np.array(gen_pops)
+    # maxes
+    gen_maxes = np.max(gens_fits, axis = 2).max(axis = 0) # 10 values
+    # mean
+    gen_means = np.mean(gens_fits, axis = 2).mean(axis = 0) # 10 values
+    # stds
+    gen_stds = np.std(gens_fits, axis = 2).std(axis = 0) # 10 values
+    # Diversity (ISLANDS 4D): island : generation : individuals : gene 
+    genewise_stds = np.std(gens_pops, axis = 2) # per gene, across individuals
+    diversity = np.mean(genewise_stds, axis = 2).mean(axis = 0) # 10 values
+
+    rows = np.arange(round(0+diversity.shape[0]*cycle), 
+                     round(diversity.shape[0]+diversity.shape[0]*cycle))
+
+    return np.vstack([rows, gen_maxes, gen_means, gen_stds, diversity]).T
 
 # promoting diversity
 def vectorized_fitness_sharing(fitnesses: np.ndarray, population: np.ndarray, 
@@ -315,10 +350,11 @@ def vectorized_fitness_sharing(fitnesses: np.ndarray, population: np.ndarray,
     return shared_fitnesses
 
 # Tournament selection
-def vectorized_tournament_selection(population, fitnesses, n_tournaments, k=15):
+def vectorized_tournament_selection(population, fitnesses, n_tournaments, k=2):
     """
     Vectorized tournament selection to select multiple parents in parallel.
     !!! MUCH MORE EFFICIENT!!!
+    k SHOULD be ± 10% pop size
     """
     # Randomly select k individuals for each tournament (by default with replacement)
     players = np.random.choice(np.arange(len(population)), size=(n_tournaments, k))
@@ -343,7 +379,6 @@ def vectorized_parent_selection(population, fitnesses, env: Environment, n_child
     
     # Vectorized fitness evaluation of selected parents
     f_parents = evaluate_fitnesses(env, g_parents)
-    # breakpoint()
     return g_parents, f_parents
 
 # Survivor selection with elitism and random diversity preservation
@@ -459,13 +494,10 @@ def vectorized_uncorrelated_mut_one_sigma(individual: np.ndarray, sigma: float,
 
     return mutated_individual, sigma_prime
 
-# ToDo:
-def uncorrelated_mut_N_sigmas():
-    pass
-
 # ToDo: 
-def save_results():
-    pass
+def save_results(res, experiment_name):
+        res = np.vstack(res)
+        np.savetxt(experiment_name+'/results.txt',res, header="gen best mean std diversity", fmt = '%.6f')
 
 if __name__ == '__main__':
     main()
