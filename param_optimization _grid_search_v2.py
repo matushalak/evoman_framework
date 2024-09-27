@@ -10,6 +10,7 @@ from evoman.environment import Environment
 from demo_controller import player_controller
 
 # imports other libs
+import itertools
 import time
 import numpy as np
 import os
@@ -25,35 +26,15 @@ def parse_args():
 
     # Define arguments
     parser.add_argument('-name', '--exp_name', type=str, required=False, help="Experiment name")
-    parser.add_argument('-pop', '--popsize', type=int, required=False, default = 100, help="Population size (eg. 100)")
-    parser.add_argument('-mg', '--maxgen', type=int, required=False, default = 50, help="Max generations (eg. 500)")
+    #parser.add_argument('-pop', '--popsize', type=int, required=False, default = 100, help="Population size (eg. 100)")
+    parser.add_argument('-mg', '--maxgen', type=int, required=False, default = 100, help="Max generations (eg. 500)")
     #parser.add_argument('-cr', '--crossover_rate', type=float, required=False, default = 0.5, help="Crossover rate (e.g., 0.8)")
     #parser.add_argument('-mr', '--mutation_rate', type=float, required=False, default = 0.1, help="Mutation rate (e.g., 0.05)")
     parser.add_argument('-nh', '--nhidden', type=int, required=False, default = 10, help="Number of Hidden Neurons (eg. 10)")
     parser.add_argument('-tst', '--test', type=bool, required=False, default = False, help="Train or Test (default = Train)")
-    parser.add_argument('-nme', '--enemy', type=int, required=False, default = 2, help="Select Enemy")
+    parser.add_argument('-nme', '--enemy', type=int, required=False, default = 6, help="Select Enemy")
 
     return parser.parse_args()
-
-def objective(trial, popsize, mg, n_hidden, experiment_name,
-                 env, new_evolution, save_gens, num_reps):
-    # Hyperparameter search space
-    scaling_factor = trial.suggest_float('scaling_factor', 0.1, 10.0)  # Fitness sharing scaling factor
-    mutation_rate = trial.suggest_float('mutation_rate', 0.001, 0.1)  # Mutation rate
-    sigma_prime = trial.suggest_float('sigma_prime', 0.01, 5.0)  # Mutation sigma
-    crossover_rate = trial.suggest_float('crossover_rate', 0.5, 1.0)  # Crossover rate
-    alpha = trial.suggest_float('alpha', 0.1, 2.0)  # Recombination factor
-    tournament_size = trial.suggest_int('tournament_size', 2, 16)  # Tournament selection size
-    elite_fraction = trial.suggest_float('elite_fraction', 0.01, 0.3)  # Elite fraction in survivor selection
-
-    hyperparameters = (scaling_factor, sigma_prime, alpha, tournament_size, elite_fraction, mutation_rate, crossover_rate)
-
-    # Replace with your actual evolutionary algorithm call
-    # Pass the hyperparameters as arguments
-    performance = mean_result_EA1(hyperparameters, popsize, mg, n_hidden, experiment_name,
-                                    env, new_evolution, save_gens, num_reps)
-    
-    return performance 
 
 
 def mean_result_EA1(hyperparameters, popsize, mg, n_hidden, experiment_name,
@@ -70,11 +51,20 @@ def mean_result_EA1(hyperparameters, popsize, mg, n_hidden, experiment_name,
     return avg_fitness
 
 
+def save_results(experiment_name, params, fitness):
+    """ Save the fitness and corresponding parameters to a text file """
+    file_path = os.path.join(experiment_name, 'grid_search_results.txt')
+    with open(file_path, 'a') as f:
+        f.write(f"Params: Mutation Rate={params['mutation_rate']}, Crossover Rate={params['crossover_rate']}, "
+                f"Population Size={params['popsize']}\n")
+        f.write(f"Fitness: {fitness}\n\n")
+
+
 def main():
     '''Main function for basic EA, runs the EA which saves results'''
     # command line arguments for experiment parameters
     args = parse_args()
-    popsize = args.popsize
+    #popsize = args.popsize
     mg = args.maxgen
     #cr = args.crossover_rate
     #mr = args.mutation_rate
@@ -82,7 +72,7 @@ def main():
     enemy = args.enemy
 
     save_gens = True
-    num_reps = 5
+    num_reps = 1
     new_evolution = True
 
     if isinstance(args.exp_name, str):
@@ -114,12 +104,34 @@ def main():
     # default environment fitness is assumed for experiment
     env.state_to_log() # checks environment state
 
-    study = optuna.create_study(direction='maximize')  # If you want to maximize the fitness score
-    study.optimize(lambda trial: objective(trial, popsize, mg, n_hidden, experiment_name,
-                     env, new_evolution, save_gens, num_reps), n_trials=50)
+    # Fixed parameters
+    scaling_factor = 0.15
+    sigma_prime = 0.05
+    alpha = 0.5
+    tournament_size = 15
+    elite_fraction = 0.8
 
-    # Print best hyperparameters
-    print("Best hyperparameters: ", study.best_params)
+    # Define grid search ranges for mutation rate, crossover rate, and population size
+    mutation_rates = [0.05, 0.25]#, 0.45, 0.65, 0.85]
+    crossover_rates = [0.05, 0.25]#, 0.45, 0.65, 0.85]
+    population_sizes = [100, 125]#, 150, 175, 200]
+
+    # Cartesian product of the grid search parameters
+    grid = itertools.product(mutation_rates, crossover_rates, population_sizes)
+
+    # Grid search over mutation rate, crossover rate, and population size
+    for mutation_rate, crossover_rate, popsize in grid:
+        # Set the hyperparameters
+        hyperparameters = (scaling_factor, sigma_prime, alpha, tournament_size, elite_fraction, mutation_rate, crossover_rate)
+
+        # Evaluate performance using mean_result_EA1 directly
+        fitness = mean_result_EA1(hyperparameters, popsize, mg, n_hidden, experiment_name, env, new_evolution, save_gens, num_reps)
+
+        # Save results to a file
+        save_results(experiment_name, {'mutation_rate': mutation_rate, 'crossover_rate': crossover_rate, 'popsize': popsize}, fitness)
+
+        print(f"Params: Mutation Rate={mutation_rate}, Crossover Rate={crossover_rate}, Population Size={popsize}, Fitness: {fitness}")
+
 
 
 

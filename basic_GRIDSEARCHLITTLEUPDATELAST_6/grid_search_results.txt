@@ -1,0 +1,12 @@
+Params: Mutation Rate=0.25, Crossover Rate=0.05, Population Size=100
+Fitness: 86.90626719449065
+
+Params: Mutation Rate=0.25, Crossover Rate=0.25, Population Size=100
+Fitness: 84.15118681455743
+
+Params: Mutation Rate=0.05, Crossover Rate=0.25, Population Size=100
+Fitness: 84.52431730225214
+
+Params: Mutation Rate=0.05, Crossover Rate=0.05, Population Size=100
+Fitness: 65.54637500110731
+
