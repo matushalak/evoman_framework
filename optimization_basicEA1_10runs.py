@@ -49,13 +49,14 @@ def main():
     enemies = args.enemies
     base_dir = args.directory
 
-    headless = True
-    if headless:
-        os.environ["SDL_VIDEODRIVER"] = "dummy"
-
     # Create the base directory if it does not exist
     if not os.path.exists(base_dir):
         os.makedirs(base_dir)
+
+    # choose this for not using visuals and thus making experiments faster
+    headless = True
+    if headless:
+        os.environ["SDL_VIDEODRIVER"] = "dummy"
 
     # Run the EA for each enemy
     for enemy in enemies:
@@ -77,6 +78,9 @@ def main():
                               level=2,
                               speed="fastest",
                               visuals=False)
+            
+            # default environment fitness is assumed for experiment
+            env.state_to_log() # checks environment state
 
             # Run the basic EA for this enemy and run number
             print(f'\nRunning EA for enemy {enemy}, run {run}\n')
