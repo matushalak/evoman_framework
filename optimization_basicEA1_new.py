@@ -5,160 +5,95 @@
 
 # imports framework
 import sys
-import itertools
+
 from evoman.environment import Environment
 from demo_controller import player_controller
+
+# imports other libs
 import time
 import numpy as np
 import os
 import argparse
 from joblib import Parallel, delayed
 from pandas import read_csv
-from threading import Lock
-
-import random
-
-
-file_lock = None
 
 def parse_args():
     '''' Function enabling command-line arguments'''
+    # Initialize the argument parser
     parser = argparse.ArgumentParser(description="Optimize weights of Controller NN using EA")
+
+    # Define arguments
     parser.add_argument('-name', '--exp_name', type=str, required=False, help="Experiment name")
-    parser.add_argument('-mg', '--maxgen', type=int, required=False, default=100, help="Max generations (eg. 500)")
-    parser.add_argument('-nh', '--nhidden', type=int, required=False, default=10, help="Number of Hidden Neurons (eg. 10)")
-    parser.add_argument('-nme', '--enemy', type=int, required=False, default=6, help="Select Enemy")
+    parser.add_argument('-pop', '--popsize', type=int, required=False, default = 100, help="Population size (eg. 100)")
+    parser.add_argument('-mg', '--maxgen', type=int, required=False, default = 500, help="Max generations (eg. 500)")
+    parser.add_argument('-cr', '--crossover_rate', type=float, required=False, default = 0.5, help="Crossover rate (e.g., 0.8)")
+    parser.add_argument('-mr', '--mutation_rate', type=float, required=False, default = 0.1, help="Mutation rate (e.g., 0.05)")
+    parser.add_argument('-nh', '--nhidden', type=int, required=False, default = 10, help="Number of Hidden Neurons (eg. 10)")
+    parser.add_argument('-tst', '--test', type=bool, required=False, default = False, help="Train or Test (default = Train)")
+    parser.add_argument('-nme', '--enemy', type=int, required=False, default = 2, help="Select Enemy")
+
     return parser.parse_args()
 
+def main():
+    '''Main function for basic EA, runs the EA which saves results'''
+    # command line arguments for experiment parameters
+    args = parse_args()
+    popsize = args.popsize
+    mg = args.maxgen
+    cr = args.crossover_rate
+    mr = args.mutation_rate
+    n_hidden = args.nhidden
+    enemy = args.enemy
 
-def mean_result_EA1(hyperparameters, popsize, mg, n_hidden, experiment_name, env, new_evolution, save_gens, num_reps):
-    avg_fitness = 0
-    for _ in range(num_reps):
-        fitness = basic_ea(hyperparameters, popsize, mg, n_hidden, experiment_name, env, new_evolution, save_gens)
-        avg_fitness += fitness
-    return avg_fitness / num_reps
-
-
-def initialize_lock():
-    global file_lock
-    if file_lock is None:
-        file_lock = Lock()  # Initialize the lock for each worker
-
-def save_results(experiment_name, params, fitness):
-    """ Save the fitness and corresponding parameters to a text file with a lock """
-    global file_lock
-    initialize_lock()  # Ensure the lock is initialized in each worker process
-    file_path = os.path.join(experiment_name, 'grid_search_results.txt')
-
-    # Use the file lock to ensure that only one process writes to the file at a time
-    with file_lock:
-        with open(file_path, 'a') as f:
-            f.write(f"Params: Mutation Rate={params['mutation_rate']}, Crossover Rate={params['crossover_rate']}, "
-                    f"Population Size={params['popsize']}\n")
-            f.write(f"Fitness: {fitness}\n\n")
-
-def aggregate_results(experiment_name):
-    """ Aggregates the final results and prints the best fitness with parameters """
-    final_file = os.path.join(experiment_name, 'grid_search_results.txt')
-
-    best_fitness = -float('inf')  # Initialize with a very low value
-    best_params = None
-
-    # Read the final results file and find the best fitness
-    with open(final_file, 'r') as infile:
-        lines = infile.readlines()
-
-        # Read two lines at a time (params and fitness)
-        for i in range(0, len(lines), 2):
-            params_line = lines[i]
-            fitness_line = lines[i + 1]
-
-            # Extract the fitness value
-            fitness_value = float(fitness_line.split(":")[1].strip())
-
-            # Check if this is the best fitness so far
-            if fitness_value > best_fitness:
-                best_fitness = fitness_value
-                best_params = params_line
-
-    # Print the best fitness and parameters
-    print("\nBest Fitness:", best_fitness)
-    print("Best Parameters:", best_params)
-
-
-def evaluate_combination(mutation_rate, crossover_rate, popsize, mg, n_hidden, experiment_name, enemy, new_evolution, save_gens, num_reps):
-    # Create a new environment for each worker (avoid passing the env object)
+    if isinstance(args.exp_name, str):
+        experiment_name = 'basic_' + args.exp_name
+    else:
+        experiment_name = 'basic_' + input("Enter Experiment (directory) Name:")
+    
+    # add enemy name
+    experiment_name = experiment_name + f'_{enemy}'
+    # directory to save experimental results
+    if not os.path.exists(experiment_name):
+        os.makedirs(experiment_name)
+    
+    # choose this for not using visuals and thus making experiments faster
     headless = True
     if headless:
         os.environ["SDL_VIDEODRIVER"] = "dummy"
 
+    # initializes simulation in individual evolution mode, for single static enemy.
     env = Environment(experiment_name=experiment_name,
-                      enemies=[enemy],
-                      playermode="ai",
-                      player_controller=player_controller(n_hidden),
-                      enemymode="static",
-                      level=2,
-                      speed="fastest",
-                      visuals=False)
+                    enemies=[enemy],
+                    playermode="ai",
+                    player_controller=player_controller(n_hidden), # you  can insert your own controller here
+                    enemymode="static",
+                    level=2,
+                    speed="fastest",
+                    visuals=False)
+    
+    # default environment fitness is assumed for experiment
+    env.state_to_log() # checks environment state
 
-    env.state_to_log()
+    if args.test == True:
+        best_solution = np.loadtxt(experiment_name+'/best.txt')
+        print( '\n RUNNING SAVED BEST SOLUTION \n')
+        env.update_parameter('speed','normal')
+        vfitness, vplayerlife, venemylife, vtime = run_game(env, best_solution, test = True)
+        print('vfitness, vplayerlife, venemylife, vtime:\n',
+              vfitness, vplayerlife, venemylife, vtime)
+        sys.exit(0)
 
-    # Set the hyperparameters
-    scaling_factor = 0.15
-    sigma_prime = 0.05
-    alpha = 0.5
-    tournament_size = 15
-    elite_fraction = 0.8
-
-    hyperparameters = (scaling_factor, sigma_prime, alpha, tournament_size, elite_fraction, mutation_rate, crossover_rate)
-
-    # Evaluate performance using mean_result_EA1
-    fitness = mean_result_EA1(hyperparameters, popsize, mg, n_hidden, experiment_name, env, new_evolution, save_gens, num_reps)
-
-    # Save results to a file
-    save_results(experiment_name, {'mutation_rate': mutation_rate, 'crossover_rate': crossover_rate, 'popsize': popsize}, fitness)
-
-    return fitness
-
-
-def main():
-    '''Main function for grid search EA'''
-    args = parse_args()
-    mg = args.maxgen
-    n_hidden = args.nhidden
-    enemy = args.enemy
-
-    save_gens = False
-    num_reps = 2
-    new_evolution = True
-
-    experiment_name = 'basic_' + (args.exp_name if isinstance(args.exp_name, str) else input("Enter Experiment (directory) Name:"))
-    experiment_name += f'_{enemy}'
-
-    if not os.path.exists(experiment_name):
-        os.makedirs(experiment_name)
-
-    # Define grid search ranges for mutation rate, crossover rate, and population size
-    mutation_rates = [0.05, 0.25, 0.45, 0.65, 0.85]
-    crossover_rates = [0.05, 0.25, 0.45, 0.65, 0.85]
-    population_sizes = [100, 150, 200]
-
-    # Cartesian product of the grid search parameters
-    grid = list(itertools.product(mutation_rates, crossover_rates, population_sizes))
-
-    # Run the grid search in parallel using joblib.Parallel
-    Parallel(n_jobs=-1)(delayed(evaluate_combination)(mutation_rate, crossover_rate, popsize, mg, n_hidden, experiment_name,
-                                                     enemy, new_evolution, save_gens, num_reps)
-                        for mutation_rate, crossover_rate, popsize in grid)
-
-
-
+    if not os.path.exists(experiment_name+'/evoman_solstate'):
+        print( '\nNEW EVOLUTION\n')
+        # with initialization
+        basic_ea(popsize, mg, mr, cr, n_hidden, experiment_name,
+                 env)
+    else:
+        basic_ea(popsize, mg, mr, cr, n_hidden, experiment_name,
+                 env)
 
 # for parallelization later
 # worker_env = None
-
-
-
 
 # # runs game (evaluate fitness for 1 individual)
 def run_game(env:Environment,individual, test=False):
@@ -276,7 +211,7 @@ def vectorized_tournament_selection(population, fitnesses, n_tournaments, k=15):
     return selected_parents
 
 # Parent selection
-def vectorized_parent_selection(population, fitnesses, env: Environment, k=15, n_children=2):
+def vectorized_parent_selection(population, fitnesses, env: Environment, n_children=2, k=15):
     """
     Vectorized parent selection using tournament-based selection.
     
@@ -364,7 +299,7 @@ def vectorized_blend_recombination(p1: np.ndarray, p2: np.ndarray, alpha: float 
     return ch1, ch2
 
 
-def vectorized_crossover(all_parents: np.ndarray, p_crossover: float, alpha:float, recombination_operator: callable) -> np.ndarray:
+def vectorized_crossover(all_parents: np.ndarray, p_crossover: float, recombination_operator: callable) -> np.ndarray:
     """
     Perform fully vectorized recombination to produce all offspring.
     """
@@ -380,7 +315,7 @@ def vectorized_crossover(all_parents: np.ndarray, p_crossover: float, alpha:floa
     crossover_mask = np.random.uniform(0, 1, size=half_pop_size) < p_crossover
 
     # Perform recombination on selected pairs
-    ch1, ch2 = recombination_operator(parent1, parent2, alpha)
+    ch1, ch2 = recombination_operator(parent1, parent2)
 
     # Create offspring array by filling in the crossover children and copying the parents when no crossover
     offspring = np.empty_like(all_parents)
@@ -416,15 +351,26 @@ def vectorized_uncorrelated_mut_one_sigma(individual: np.ndarray, sigma: float, 
 
     return mutated_individual, sigma_prime
 
-def basic_ea (hyperparameters:tuple, popsize:int, max_gen:int, n_hidden_neurons:int,
-              experiment_name:str, env:Environment, new_evolution:bool = True, save_gens:bool = True):
+def gain_diversity(env, best_sol, population_genes):
+    '''
+    Obtains gain for best solution in a generation and population diversity of a given generation (average genewise STD)
+    '''
+    # Gain
+    _, pl, el, _ = run_game(env,best_sol, test=True)
+    gain = pl - el
+
+    # Diversity: rows = individuals, columns = genes
+    genewise_stds = np.std(population_genes, axis = 0) # per gene, across individuals
+    diversity = np.mean(genewise_stds)
+
+    return gain, diversity
+
+
+def basic_ea (popsize:int, max_gen:int, mr:float, cr:float, n_hidden_neurons:int,
+              experiment_name:str, env:Environment, new_evolution:bool = True):
     ''' 
     Basic evolutionary algorithm to optimize the weights 
     '''
-    random_number = random.randint(1, 500)
-
-    scaling_factor, sigma_prime, alpha, tournament_size, elite_fraction, mr, cr = hyperparameters   
-
     # number of weights for multilayer with 10 hidden neurons
     individual_dims = (env.get_num_sensors()+1)*n_hidden_neurons + (n_hidden_neurons+1)*5
     # initiation time
@@ -436,7 +382,7 @@ def basic_ea (hyperparameters:tuple, popsize:int, max_gen:int, n_hidden_neurons:
         ini_g = 0
         gene_limits = [-1.0, 1.0]
         # starting step size 0.5?
-        #sigma_prime = 0.05     --> NOW USE AS HYPERPARAMETER FOR OPTIMIZATION
+        sigma_prime = 0.05
         population = initialize_population(popsize, individual_dims, gene_limits)  
         fitnesses = evaluate_fitnesses(env, population)
         solutions = [population, fitnesses]
@@ -453,32 +399,32 @@ def basic_ea (hyperparameters:tuple, popsize:int, max_gen:int, n_hidden_neurons:
 
         all_time = best_individual, best_fitness
 
-        # stagnation prevention
-        stagnation = 0
+        # for self-adaptivity
         starting_mutation_rate, starting_crossover_rate = mr, cr
+        elite_fraction, starting_elite_fraction = 0.8, 0.8
 
+        gain, diversity = gain_diversity(env, best_individual, population)
         # saves results for first pop
-        if save_gens == True:
-            file_aux  = open(experiment_name+'/results.txt','a')
-            file_aux.write('\n\ngen best mean std sigma_prime mutation_r crossover_r')
-            print( '\n GENERATION '+str(ini_g)+' '+str(round(best_fitness,6))+' '+str(round(mean_fitness,6))+' '+str(round(std_fitness,6))+' '
-                +str(round(sigma_prime, 6))+' '+str(round(mr, 6))+' '+str(round(cr, 6)))
-            file_aux.write('\n'+str(ini_g)+' '+str(round(best_fitness,6))+' '+str(round(mean_fitness,6))+' '+str(round(std_fitness,6))+' '+str(round(sigma_prime, 6))+' '+str(round(mr, 6))+' '+str(round(cr, 6)))
-            file_aux.close()
+        file_aux  = open(experiment_name+'/results.txt','a')
+        file_aux.write('\n\ngen best mean std gain diversity')
+        print( '\n GENERATION '+str(ini_g)+' '+str(round(best_fitness,6))+' '+str(round(mean_fitness,6))+' '+str(round(std_fitness,6))+' '
+              +str(round(gain, 6))+' '+str(round(diversity, 6)))
+        file_aux.write('\n'+str(ini_g)+' '+str(round(best_fitness,6))+' '+str(round(mean_fitness,6))+' '+str(round(std_fitness,6))+' '+str(round(gain, 6))+' '+str(round(diversity, 6)))
+        file_aux.close()
 
     # evolution loop
     for i in range(max_gen):
         # niching (fitness sharing)
-        shared_fitnesses = vectorized_fitness_sharing(fitnesses, population, gene_limits, scaling_factor)
+        shared_fitnesses = vectorized_fitness_sharing(fitnesses, population, gene_limits)
         # shared_fitnesses = fitnesses # disables fitness sharing
         # ?? crowding ??
         # ?? speciation - islands ??
 
         # Parent selection: (Tournament? - just first try) Probability based - YES
-        parents, parent_fitnesses = vectorized_parent_selection(population, shared_fitnesses, env, tournament_size)
+        parents, parent_fitnesses = vectorized_parent_selection(population, shared_fitnesses, env)
 
         # crossover / recombination: Whole Arithmetic (basic) | Blend Recombination (best)
-        offspring = vectorized_crossover(parents, cr, alpha, vectorized_blend_recombination)
+        offspring = vectorized_crossover(parents, cr, vectorized_blend_recombination)
         # offspring_fitnesses = evaluate_fitnesses(env, offspring)
         
         # mutation: Uncorrelated mutation with N step sizes
@@ -491,7 +437,7 @@ def basic_ea (hyperparameters:tuple, popsize:int, max_gen:int, n_hidden_neurons:
 
         # Survivor selection with elitism & some randomness
         population, fitnesses = survivor_selection(parents, parent_fitnesses, 
-                                                   list(offspring_mutated), offspring_fitnesses, elite_fraction)
+                                                   list(offspring_mutated), offspring_fitnesses,elite_fraction)
 
         # Check for best solution
         best_idx = np.argmax(fitnesses)
@@ -499,60 +445,76 @@ def basic_ea (hyperparameters:tuple, popsize:int, max_gen:int, n_hidden_neurons:
         gen_mean = np.mean(fitnesses)
         gen_std = np.std(fitnesses)
         
+        # self adaptive to promote exploitation, TOO much exploration atm
+        # if generational_fitness > 80.0:
+        #     mr = .01
+        #     cr = .2
+        # elif generational_fitness > 85:
+        #     mr = .0075
+        #     cr = .175
+        #     elite_fraction = .85
+        # elif generational_fitness > 90:
+        #     mr = .005
+        #     cr = .1
+        # elif generational_fitness > 92:
+        #     mr = .0025
+        #     cr = .05
+        #     elite_fraction = .9
+        # else:
+        #     mr, cr = starting_mutation_rate, starting_crossover_rate 
+        #     elite_fraction = starting_elite_fraction
+
         best_fitness = fitnesses[best_idx]
         best_individual = population[best_idx]
 
+        # stats
+        mean_fitness = np.mean(fitnesses)
+        std_fitness = np.std(fitnesses)
+
+        # update gain & diversity
+        gain, diversity = gain_diversity(env, best_individual, population)        
+    
         if best_fitness > all_time[-1]:
             all_time = (best_individual, best_fitness)
 
         # OUTPUT: weights + biases vector
         # saves results
-        if save_gens == True:
-            file_aux  = open(experiment_name+'/results.txt','a')
-            # file_aux.write('\n\ngen best mean std sigma_prime mutation_r crossover_r')
-            file_aux.write('\n'+str(i)+' '+str(round(generational_fitness,6))+' '+str(round(gen_mean,6))+' '+str(round(gen_std,6))+' '+str(round(sigma_prime, 6))+' '+str(round(mr, 6))+' '+str(round(cr, 6)))
-            file_aux.close()
+        file_aux  = open(experiment_name+'/results.txt','a')
+        # file_aux.write('\n\ngen best mean std sigma_prime mutation_r crossover_r')
+        print( '\n GENERATION '+str(i)+' '+str(round(generational_fitness,6))+' '+str(round(gen_mean,6))+' '+str(round(gen_std,6))+' '
+              +str(round(gain, 6))+' '+str(round(diversity, 6)))
+        file_aux.write('\n'+str(i)+' '+str(round(generational_fitness,6))+' '+str(round(gen_mean,6))+' '+str(round(gen_std,6))+' '+str(round(gain, 6))+' '+str(round(diversity, 6)))
+        file_aux.close()
 
-            # saves generation number
-            file_aux  = open(experiment_name+'/gen.txt','a')
-            file_aux.write(str(i))
-            file_aux.close()
+        # saves generation number
+        file_aux  = open(experiment_name+'/gen.txt','a')
+        file_aux.write(str(i))
+        file_aux.close()
 
-            # saves file with the best solution
-            np.savetxt(experiment_name+'/best.txt',best_individual)
-            np.savetxt(experiment_name+'/alltime.txt',all_time[0])
+        # saves file with the best solution
+        np.savetxt(experiment_name+'/best.txt',best_individual)
+        np.savetxt(experiment_name+'/alltime.txt',all_time[0])
 
-            if not os.path.exists('basic_solutions'):
-                os.makedirs('basic_solutions')
-            np.savetxt(f'basic_solutions/{env.enemyn}best.txt', best_individual)
-
-        #print( '\n GENERATION '+str(i)+' '+str(round(generational_fitness,6))+' '+str(round(gen_mean,6))+' '+str(round(gen_std,6))+' '
-        #      +str(round(sigma_prime, 6))+' '+str(round(mr, 6))+' '+str(round(cr, 6)))
-        print(f'\n{random_number}, GENERATION '+str(i)+' '+str(round(generational_fitness,6))+' '+str(round(gen_mean,6))+' '+str(round(gen_std,6))+' '
-              +str(round(sigma_prime, 6))+' '+str(round(mr, 6))+' '+str(round(cr, 6)))
-
+        if not os.path.exists('basic_solutions'):
+            os.makedirs('basic_solutions')
+        np.savetxt(f'basic_solutions/{env.enemyn}best.txt', best_individual)
 
         # saves simulation state
         solutions = [population, fitnesses]
         env.update_solutions(solutions)
         env.save_state()
-        
-    if save_gens == True:
-        np.savetxt(experiment_name+'/alltime.txt',all_time[0])
-        np.savetxt(f'basic_solutions/{env.enemyn}alltime.txt', all_time[0])
 
-        file = open(experiment_name+'/neuroended', 'w')  # saves control (simulation has ended) file for bash loop file
-        file.close()
-
+    np.savetxt(experiment_name+'/alltime.txt',all_time[0])
+    np.savetxt(f'basic_solutions/{env.enemyn}alltime.txt', all_time[0])
     fim = time.time() # prints total execution time for experiment
     print( '\nExecution time: '+str(round((fim-ini)/60))+' minutes \n')
     print( '\nExecution time: '+str(round((fim-ini)))+' seconds \n')
 
+
+    file = open(experiment_name+'/neuroended', 'w')  # saves control (simulation has ended) file for bash loop file
+    file.close()
+
     env.state_to_log() # checks environment state
-
-    return all_time[-1]
-
-
 
 if __name__ == '__main__':
     main()
