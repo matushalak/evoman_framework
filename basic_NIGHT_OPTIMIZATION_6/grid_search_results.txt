@@ -82,3 +82,126 @@ Fitness: 87.50778930100094
 Params: Mutation Rate=0.45, Crossover Rate=0.05, Population Size=100
 Fitness: 90.1954339312687
 
+Params: Mutation Rate=0.25, Crossover Rate=0.65, Population Size=200
+Fitness: 88.64979096015122
+
+Params: Mutation Rate=0.25, Crossover Rate=0.85, Population Size=150
+Fitness: 87.75111766346396
+
+Params: Mutation Rate=0.45, Crossover Rate=0.25, Population Size=100
+Fitness: 86.40916817021017
+
+Params: Mutation Rate=0.45, Crossover Rate=0.05, Population Size=150
+Fitness: 86.57675836575288
+
+Params: Mutation Rate=0.25, Crossover Rate=0.85, Population Size=200
+Fitness: 88.68571577571018
+
+Params: Mutation Rate=0.45, Crossover Rate=0.25, Population Size=150
+Fitness: 87.76803200205237
+
+Params: Mutation Rate=0.45, Crossover Rate=0.45, Population Size=100
+Fitness: 87.98531004645503
+
+Params: Mutation Rate=0.45, Crossover Rate=0.65, Population Size=100
+Fitness: 87.34526477734047
+
+Params: Mutation Rate=0.45, Crossover Rate=0.45, Population Size=150
+Fitness: 88.74969241128375
+
+Params: Mutation Rate=0.45, Crossover Rate=0.05, Population Size=200
+Fitness: 88.0064009424793
+
+Params: Mutation Rate=0.45, Crossover Rate=0.25, Population Size=200
+Fitness: 87.62797402402254
+
+Params: Mutation Rate=0.45, Crossover Rate=0.85, Population Size=100
+Fitness: 86.8344053611763
+
+Params: Mutation Rate=0.45, Crossover Rate=0.45, Population Size=200
+Fitness: 87.60729553284901
+
+Params: Mutation Rate=0.45, Crossover Rate=0.65, Population Size=150
+Fitness: 89.21903205386849
+
+Params: Mutation Rate=0.65, Crossover Rate=0.05, Population Size=100
+Fitness: 86.13382326697791
+
+Params: Mutation Rate=0.45, Crossover Rate=0.65, Population Size=200
+Fitness: 88.06224186238941
+
+Params: Mutation Rate=0.45, Crossover Rate=0.85, Population Size=150
+Fitness: 89.9524977988196
+
+Params: Mutation Rate=0.65, Crossover Rate=0.25, Population Size=100
+Fitness: 88.24159966655944
+
+Params: Mutation Rate=0.65, Crossover Rate=0.05, Population Size=150
+Fitness: 89.02579142523922
+
+Params: Mutation Rate=0.45, Crossover Rate=0.85, Population Size=200
+Fitness: 87.83619028060426
+
+Params: Mutation Rate=0.65, Crossover Rate=0.45, Population Size=100
+Fitness: 87.67965852838435
+
+Params: Mutation Rate=0.65, Crossover Rate=0.25, Population Size=150
+Fitness: 86.63124398715985
+
+Params: Mutation Rate=0.65, Crossover Rate=0.05, Population Size=200
+Fitness: 88.47504654707794
+
+Params: Mutation Rate=0.65, Crossover Rate=0.65, Population Size=100
+Fitness: 88.79660385741926
+
+Params: Mutation Rate=0.65, Crossover Rate=0.25, Population Size=200
+Fitness: 87.28185591007062
+
+Params: Mutation Rate=0.65, Crossover Rate=0.45, Population Size=150
+Fitness: 89.67231271929403
+
+Params: Mutation Rate=0.65, Crossover Rate=0.85, Population Size=100
+Fitness: 86.7010591517766
+
+Params: Mutation Rate=0.65, Crossover Rate=0.65, Population Size=150
+Fitness: 90.97093025682655
+
+Params: Mutation Rate=0.65, Crossover Rate=0.45, Population Size=200
+Fitness: 89.20269731765416
+
+Params: Mutation Rate=0.85, Crossover Rate=0.05, Population Size=100
+Fitness: 88.17955941327511
+
+Params: Mutation Rate=0.65, Crossover Rate=0.85, Population Size=150
+Fitness: 90.07280547547575
+
+Params: Mutation Rate=0.65, Crossover Rate=0.65, Population Size=200
+Fitness: 87.90313420423317
+
+Params: Mutation Rate=0.85, Crossover Rate=0.25, Population Size=100
+Fitness: 88.4224264916181
+
+Params: Mutation Rate=0.85, Crossover Rate=0.05, Population Size=150
+Fitness: 88.86231135227833
+
+Params: Mutation Rate=0.65, Crossover Rate=0.85, Population Size=200
+Fitness: 88.10065131910807
+
+Params: Mutation Rate=0.85, Crossover Rate=0.25, Population Size=150
+Fitness: 87.79181000216892
+
+Params: Mutation Rate=0.85, Crossover Rate=0.45, Population Size=100
+Fitness: 88.77031089780556
+
+Params: Mutation Rate=0.85, Crossover Rate=0.65, Population Size=100
+Fitness: 89.68303288491296
+
+Params: Mutation Rate=0.85, Crossover Rate=0.05, Population Size=200
+Fitness: 87.77676968207554
+
+Params: Mutation Rate=0.85, Crossover Rate=0.45, Population Size=150
+Fitness: 88.3801555368183
+
+Params: Mutation Rate=0.85, Crossover Rate=0.25, Population Size=200
+Fitness: 88.18607534439354
+
