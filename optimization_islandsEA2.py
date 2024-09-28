@@ -32,13 +32,13 @@ def parse_args():
 
     # Define arguments
     parser.add_argument('-name', '--exp_name', type=str, required=False, help="Experiment name")
-    parser.add_argument('-pop', '--popsize', type=int, required=False, default = 150, help="Population size (eg. 100)")
-    parser.add_argument('-mg', '--maxgen', type=int, required=False, default = 100, help="Max generations (eg. 500)")
-    parser.add_argument('-cr', '--crossover_rate', type=float, required=False, default = 0.85, help="Crossover rate (e.g., 0.8)")
-    parser.add_argument('-mr', '--mutation_rate', type=float, required=False, default = 0.25, help="Mutation rate (e.g., 0.05)")
+    parser.add_argument('-pop', '--popsize', type=int, required=False, default = 100, help="Population size (eg. 100)")
+    parser.add_argument('-mg', '--maxgen', type=int, required=False, default = 500, help="Max generations (eg. 500)")
+    parser.add_argument('-cr', '--crossover_rate', type=float, required=False, default = 0.5, help="Crossover rate (e.g., 0.8)")
+    parser.add_argument('-mr', '--mutation_rate', type=float, required=False, default = 0.1, help="Mutation rate (e.g., 0.05)")
     parser.add_argument('-nh', '--nhidden', type=int, required=False, default = 10, help="Number of Hidden Neurons (eg. 10)")
     parser.add_argument('-tst', '--test', type=bool, required=False, default = False, help="Train or Test (default = Train)")
-    parser.add_argument('-nme', '--enemy', type=int, required=False, default = 5, help="Select Enemy")
+    parser.add_argument('-nme', '--enemy', type=int, required=False, default = 2, help="Select Enemy")
     parser.add_argument('-nislands','--nislands', type = int, required = False, default = 5, help = 'Select number of islands')
     parser.add_argument('-gpi', '--gen_per_isl', type = int, required=False, default=10, help='Generations / island')
 
@@ -306,12 +306,8 @@ def process_gen_data(gen_fits, gen_pops, cycle):
     # stds
     gen_stds = np.std(gens_fits, axis = 2).std(axis = 0) # 10 values
     # Diversity (ISLANDS 4D): island : generation : individuals : gene 
-    nislands, ngens, ninds, ngenes = gens_pops.shape 
-    gens_pops_for_diversity = gens_pops.copy()
-    np.reshape(gens_pops_for_diversity, (ngens, int(round(ninds * nislands)), ngenes))
-
-    genewise_stds = np.std(gens_pops_for_diversity, axis = 1) # per gene, across individuals
-    diversity = np.mean(genewise_stds, axis = 1) # 10 values
+    genewise_stds = np.std(gens_pops, axis = 2) # per gene, across individuals
+    diversity = np.mean(genewise_stds, axis = 2).mean(axis = 0) # 10 values
 
     rows = np.arange(round(0+diversity.shape[0]*cycle), 
                      round(diversity.shape[0]+diversity.shape[0]*cycle))
