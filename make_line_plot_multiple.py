@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # Set manual input for enemies to evaluate (e.g., [5, 6])
-enemies_to_evaluate = [6]
+enemies_to_evaluate = [5, 6]
 
 # Base directories for both algorithms
 algorithm_dirs = {
@@ -49,11 +49,12 @@ def process_results_for_enemy(base_folder, enemy, algorithm):
                     
                 # Ensure valid numeric data
                 df = df[pd.to_numeric(df['best'], errors='coerce').notnull()]
-                
+
                 # Convert columns to numeric
                 df['best'] = pd.to_numeric(df['best'])
                 df['mean'] = pd.to_numeric(df['mean'])
                 df['std'] = pd.to_numeric(df['std'])
+                df['diversity'] = pd.to_numeric(df['diversity'])
                 df['gen'] = pd.to_numeric(df['gen'])
 
                 # Append DataFrame to the list
@@ -65,10 +66,10 @@ def process_results_for_enemy(base_folder, enemy, algorithm):
 
 def make_subplots_across_enemies(algorithm_dfs_dict, enemies):
     """
-    Create subplots with the results for all enemies.
+    Create subplots with the results for all enemies, with dual y-axes for fitness and diversity.
     """
     n_enemies = len(enemies)  # Number of enemies provided
-    fig, axes = plt.subplots(nrows=n_enemies, ncols=1, figsize=(10, 6 * n_enemies))
+    fig, axes = plt.subplots(nrows=n_enemies, ncols=1, figsize=(8, 8 * n_enemies))
 
     if n_enemies == 1:
         axes = [axes]  # Handle the case where there's only one enemy to plot
@@ -77,6 +78,9 @@ def make_subplots_across_enemies(algorithm_dfs_dict, enemies):
     for i, (enemy, ax) in enumerate(zip(enemies, axes)):
         algorithm_dfs = algorithm_dfs_dict[enemy]
 
+        # Create a second y-axis for diversity (only once, shared between algorithms)
+        ax2 = ax.twinx()
+
         for algorithm_name, df in algorithm_dfs.items():
             if df is not None:
                 # Group by generation and calculate mean and std for mean and best fitness
@@ -84,39 +88,54 @@ def make_subplots_across_enemies(algorithm_dfs_dict, enemies):
                     mean_avg_fitness=('mean', 'mean'),
                     std_avg_fitness=('mean', 'std'),
                     mean_max_fitness=('best', 'mean'),
-                    std_max_fitness=('best', 'std')
+                    std_max_fitness=('best', 'std'),
+                    mean_diversity=('diversity', 'mean')
                 )
 
                 generations = grouped_stats.index
 
-                # Plot mean fitness with standard deviation shading
-                ax.plot(generations, grouped_stats['mean_avg_fitness'], label=f"{algorithm_name} mean fitness", linestyle='--')
+                # Plot mean fitness with standard deviation shading (left y-axis)
+                ax.plot(generations, grouped_stats['mean_avg_fitness'], label=f"{algorithm_name} Mean Fitness", linestyle='--')
                 ax.fill_between(generations,
                                 grouped_stats['mean_avg_fitness'] - grouped_stats['std_avg_fitness'],
                                 grouped_stats['mean_avg_fitness'] + grouped_stats['std_avg_fitness'],
                                 alpha=0.2)
 
-                # Plot best fitness with standard deviation shading
-                ax.plot(generations, grouped_stats['mean_max_fitness'], label=f"{algorithm_name} best fitness", linestyle='-')
+                # Plot best fitness with standard deviation shading (left y-axis)
+                ax.plot(generations, grouped_stats['mean_max_fitness'], label=f"{algorithm_name} Best Fitness", linestyle='-')
                 ax.fill_between(generations,
                                 grouped_stats['mean_max_fitness'] - grouped_stats['std_max_fitness'],
                                 grouped_stats['mean_max_fitness'] + grouped_stats['std_max_fitness'],
                                 alpha=0.2)
 
+                # Plot diversity on the secondary y-axis (right axis)
+                if algorithm_name == 'Algorithm 1':
+                    ax2.plot(generations, grouped_stats['mean_diversity'], label=f"{algorithm_name} Diversity", linestyle=':', color='blue')
+                elif algorithm_name == 'Algorithm 2':
+                    ax2.plot(generations, grouped_stats['mean_diversity'], label=f"{algorithm_name} Diversity", linestyle=':', color='red')
+
         # Customize each subplot
-        ax.set_title(f'Fitness evolution for enemy {enemy}', fontsize=14)
+        ax.set_title(f'Fitness and Diversity Evolution for Enemy {enemy}', fontsize=14)
         ax.set_xlabel('Generation', fontsize=12)
         ax.set_ylabel('Fitness', fontsize=12)
         ax.grid(True)
-        ax.legend()
+
+        # Customize the second y-axis for diversity
+        ax2.set_ylabel('Diversity', fontsize=12)
+        ax2.tick_params(axis='y', colors='black')
+
+        # Combine legends from both axes
+        lines, labels = ax.get_legend_handles_labels()
+        lines2, labels2 = ax2.get_legend_handles_labels()
+        ax.legend(lines + lines2, labels + labels2, loc='upper left')
 
     # Adjust layout and show the full figure
-    plt.tight_layout()
+    plt.tight_layout(pad=3.0)
     plt.show()
 
 def process_and_plot(enemies_to_evaluate, algorithm_dirs):
     """
-    Process results for all enemies and both algorithms, and generate plots.
+    Process results for all enemies and both algorithms, and generate plots with dual y-axes.
     """
     algorithm_dfs_dict = {}
 
@@ -134,7 +153,7 @@ def process_and_plot(enemies_to_evaluate, algorithm_dirs):
         # Store the results for this enemy
         algorithm_dfs_dict[enemy] = algorithm_dfs
 
-    # Generate subplots for all enemies
+    # Generate subplots for all enemies with dual y-axes
     make_subplots_across_enemies(algorithm_dfs_dict, enemies_to_evaluate)
 
 # Main script
