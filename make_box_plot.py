@@ -6,9 +6,9 @@ import seaborn as sns
 from scipy import stats
 
 #set manual input:
-ALGORITHMS = ["algo1", "algo2"]
-ENEMIES = [2, 6, 8]  # List of enemies to process
-base_folder = 'dummy_data_box_plot'  # Folder where data is stored
+ALGORITHMS = ["EA1", "EA2"] #Order matters for order of plotting
+ENEMIES = [5, 6, 8]  # List of enemies to process
+base_folder = 'box_plot_gains'  # Folder where data is stored
 
 #now, the script starts from: if __name__ == "__main__"
 
@@ -19,7 +19,7 @@ def read_gains(file_path):
         data = json.load(f)
     
     mean_gains = []
-    for gains in data.items():
+    for run_key, gains in data.items():
         #calc the mean for each run (5 gains per run)
         mean_gains.append(sum(gains) / len(gains))
     
@@ -64,7 +64,7 @@ def generate_boxplots(df, p_values, ENEMIES):
     plt.figure(figsize=(10, 6))
 
     #customize colors
-    palette = {"algo1": "royalblue", "algo2": "lightblue"}
+    palette = {"EA1": "royalblue", "EA2": "lightblue"}
     #creaete the box plot with customized palette and adjusted box positions
     ax = sns.boxplot(x='Enemy', y='Gain', hue='Algorithm', data=df, palette=palette, width=0.6)
     
