@@ -68,8 +68,8 @@ def save_results(experiment_name, params, fitness):
     # Use the file lock to ensure that only one process writes to the file at a time
     with file_lock:
         with open(file_path, 'a') as f:
-            f.write(f"Params: Mutation Rate={params['mutation_rate']}, Crossover Rate={params['crossover_rate']}, "
-                    f"Population Size={params['popsize']}\n")
+            f.write(f"Params: Elitism coefficient={params['elitism']}, Generations per island={params['gpi']}, "
+                    f"Number of islands={params['nislands']}\n")
             f.write(f"Fitness: {fitness}\n\n")
 
 
@@ -317,13 +317,14 @@ def islands(popsize:int, max_gen:int, mr:float,
         if islands_best[i_best][-1] > bf:
             best = islands_best[i_best][0]
             bf = islands_best[i_best][-1]
-            np.savetxt(experiment_name+'/alltime.txt',best)
+            # np.savetxt(experiment_name+'/alltime.txt',best)
         # migrate between islands
         np.random.shuffle(islands_evolved) # get rid of order
         islands = np.array(vectorized_migration(islands_evolved)).reshape((n_islands,-1, individual_dims))
     
-    save_results(all_gen_res, experiment_name)
-    return islands_best
+    # save_results(all_gen_res, experiment_name)
+    # best is like alltime and bf is the fitness of this best ever individual
+    return bf
     # run second half of generations in normal evolutionary mode (mixing everyone together)
 
 def process_gen_data(gen_fits, gen_pops, cycle):
@@ -392,12 +393,15 @@ def vectorized_fitness_sharing(fitnesses: np.ndarray, population: np.ndarray,
     return shared_fitnesses
 
 # Tournament selection
-def vectorized_tournament_selection(population, fitnesses, n_tournaments, k=2):
+def vectorized_tournament_selection(population, fitnesses, n_tournaments):
     """
     Vectorized tournament selection to select multiple parents in parallel.
     !!! MUCH MORE EFFICIENT!!!
     k SHOULD be ± 10% pop size
     """
+    # k roughly 10 % population size
+    k = round(population.shape[0]/10)
+    k = k if k >= 2 else 2
     # Randomly select k individuals for each tournament (by default with replacement)
     players = np.random.choice(np.arange(len(population)), size=(n_tournaments, k))
 
@@ -538,9 +542,9 @@ def vectorized_uncorrelated_mut_one_sigma(individual: np.ndarray, sigma: float,
     return mutated_individual, sigma_prime
 
 # ToDo: 
-def save_results(res, experiment_name):
-        res = np.vstack(res)
-        np.savetxt(experiment_name+'/results.txt',res, header="gen best mean std diversity", fmt = '%.6f')
+# def save_results(res, experiment_name):
+#         res = np.vstack(res)
+#         np.savetxt(experiment_name+'/results.txt',res, header="gen best mean std diversity", fmt = '%.6f')
 
 if __name__ == '__main__':
     main()
