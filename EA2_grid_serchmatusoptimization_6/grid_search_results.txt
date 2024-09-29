@@ -1,0 +1,81 @@
+Params: Elitism coefficient=0.5, Generations per island=20, Number of islands=5
+Fitness: 87.98717747586609
+
+Params: Elitism coefficient=0.5, Generations per island=20, Number of islands=6
+Fitness: 88.9253013385282
+
+Params: Elitism coefficient=0.5, Generations per island=5, Number of islands=6
+Fitness: 87.9023238363369
+
+Params: Elitism coefficient=0.5, Generations per island=10, Number of islands=6
+Fitness: 88.32375891238307
+
+Params: Elitism coefficient=0.65, Generations per island=10, Number of islands=5
+Fitness: 88.44650460307294
+
+Params: Elitism coefficient=0.65, Generations per island=5, Number of islands=5
+Fitness: 87.78988339833195
+
+Params: Elitism coefficient=0.5, Generations per island=5, Number of islands=5
+Fitness: 88.62020264413358
+
+Params: Elitism coefficient=0.5, Generations per island=10, Number of islands=5
+Fitness: 88.60557547386388
+
+Params: Elitism coefficient=0.65, Generations per island=5, Number of islands=6
+Fitness: 88.2036801062688
+
+Params: Elitism coefficient=0.5, Generations per island=20, Number of islands=3
+Fitness: 87.92570602522385
+
+Params: Elitism coefficient=0.65, Generations per island=10, Number of islands=3
+Fitness: 86.70300150249648
+
+Params: Elitism coefficient=0.5, Generations per island=5, Number of islands=3
+Fitness: 88.81487428829045
+
+Params: Elitism coefficient=0.5, Generations per island=10, Number of islands=3
+Fitness: 87.47340302029049
+
+Params: Elitism coefficient=0.65, Generations per island=5, Number of islands=3
+Fitness: 88.65114116023672
+
+Params: Elitism coefficient=0.65, Generations per island=20, Number of islands=6
+Fitness: 88.13685426381237
+
+Params: Elitism coefficient=0.65, Generations per island=10, Number of islands=6
+Fitness: 88.4287000613737
+
+Params: Elitism coefficient=0.65, Generations per island=20, Number of islands=5
+Fitness: 89.37396296426563
+
+Params: Elitism coefficient=0.65, Generations per island=20, Number of islands=3
+Fitness: 90.48551630500417
+
+Params: Elitism coefficient=0.8, Generations per island=5, Number of islands=5
+Fitness: 88.13570890705539
+
+Params: Elitism coefficient=0.8, Generations per island=5, Number of islands=6
+Fitness: 88.86313356144957
+
+Params: Elitism coefficient=0.8, Generations per island=10, Number of islands=5
+Fitness: 88.48320406930418
+
+Params: Elitism coefficient=0.8, Generations per island=20, Number of islands=5
+Fitness: 88.40485344640506
+
+Params: Elitism coefficient=0.8, Generations per island=10, Number of islands=6
+Fitness: 87.01148315492158
+
+Params: Elitism coefficient=0.8, Generations per island=10, Number of islands=3
+Fitness: 88.85577173031338
+
+Params: Elitism coefficient=0.8, Generations per island=5, Number of islands=3
+Fitness: 87.02728294086207
+
+Params: Elitism coefficient=0.8, Generations per island=20, Number of islands=6
+Fitness: 88.62759570604352
+
+Params: Elitism coefficient=0.8, Generations per island=20, Number of islands=3
+Fitness: 87.65383188818839
+
