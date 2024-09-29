@@ -1,6 +1,6 @@
 ###############################################################################
-# Author: Matus Halak       			                                      #
-# matus.halak@gmail.com     				                                  #
+# Authors: Matus Halak, Rick Geling, Rens Koppelman, Isis van Loenen
+# matus.halak@gmail.com, rickgeling@gmail.com   
 ###############################################################################
 
 # imports framework

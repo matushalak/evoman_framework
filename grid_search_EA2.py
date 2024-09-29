@@ -1,14 +1,6 @@
 ###############################################################################
 # Authors: Matus Halak, Rick Geling, Rens Koppelman, Isis van Loenen
 # matus.halak@gmail.com, rickgeling@gmail.com   
-# 
-# In this script I implement Speciation (ISLANDS MODEL) as a way to increase diversity
-# GOALS: also implement uncorrelated mutation with N sigmas!!! (put also in basic script)
-# Figure out how to use numpy arrays preferably
-# save results with a function
-
-# good parameters: pop 100/120/140/150; nislands 4/5/6/7 gpi 10/20 mr .6 cr.3 ()
-# python optimization_islandsEA2.py -nme 7 -pop 120 -mg 100 -name test -mr .6 -cr .3 -gpi 10 -nislands 5  
 ###############################################################################
 
 # imports framework

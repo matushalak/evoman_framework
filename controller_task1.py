@@ -1,7 +1,8 @@
-#######################################################################################                            #
-# Author: Matus Halak       			                                      		  #
-# matus.halak@gmail.com
-# VISUALISATION SCRIPT     				                              			  #
+#######################################################################################                            
+###############################################################################
+# Authors: Matus Halak, Rick Geling, Rens Koppelman, Isis van Loenen
+# matus.halak@gmail.com, rickgeling@gmail.com   
+# VISUALISATION SCRIPT     				                              			  
 #######################################################################################
 
 # imports framework

@@ -1,11 +1,6 @@
 ###############################################################################
-# Author: Matus Halak       			                                      #
-# matus.halak@gmail.com   
-# 
-# In this script I implement Speciation (ISLANDS MODEL) as a way to increase diversity
-
-# good parameters: pop 100/120/140/150; nislands 4/5/6/7 gpi 10/20 mr .6 cr.3 ()
-# python optimization_islandsEA2_10runs.py -pop 120 -gpi 20 -nislands 3 (elitism coefficient = .65)  
+# Authors: Matus Halak, Rick Geling, Rens Koppelman, Isis van Loenen
+# matus.halak@gmail.com, rickgeling@gmail.com   
 ###############################################################################
 
 # imports framework
