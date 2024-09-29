@@ -24,6 +24,8 @@ import os
 import argparse
 from joblib import Parallel, delayed
 from pandas import read_csv
+import itertools
+from threading import Lock
 
 def parse_args():
     '''' Function enabling command-line arguments'''
@@ -38,11 +40,65 @@ def parse_args():
     parser.add_argument('-mr', '--mutation_rate', type=float, required=False, default = 0.25, help="Mutation rate (e.g., 0.05)")
     parser.add_argument('-nh', '--nhidden', type=int, required=False, default = 10, help="Number of Hidden Neurons (eg. 10)")
     parser.add_argument('-tst', '--test', type=bool, required=False, default = False, help="Train or Test (default = Train)")
-    parser.add_argument('-nme', '--enemy', type=int, required=False, default = 5, help="Select Enemy")
-    parser.add_argument('-nislands','--nislands', type = int, required = False, default = 6, help = 'Select number of islands')
-    parser.add_argument('-gpi', '--gen_per_isl', type = int, required=False, default=10, help='Generations / island')
+    parser.add_argument('-nme', '--enemy', type=int, required=False, default = 6, help="Select Enemy")
 
     return parser.parse_args()
+
+def mean_result_EA2(elitism, gpi, nislands, popsize, mg, mr, cr, n_hidden, experiment_name,
+                                                     env, new_evolution, save_gens, num_reps):
+    avg_fitness = 0
+    for _ in range(num_reps):
+        fitness = islands(popsize, mg, mr, cr, n_hidden, experiment_name, env, nislands, gpi, elitism)
+        avg_fitness += fitness
+
+    return avg_fitness / num_reps
+
+
+def initialize_lock():
+    global file_lock
+    if file_lock is None:
+        file_lock = Lock()  # Initialize the lock for each worker
+
+def save_results(experiment_name, params, fitness):
+    """ Save the fitness and corresponding parameters to a text file with a lock """
+    global file_lock
+    initialize_lock()  # Ensure the lock is initialized in each worker process
+    file_path = os.path.join(experiment_name, 'grid_search_results.txt')
+
+    # Use the file lock to ensure that only one process writes to the file at a time
+    with file_lock:
+        with open(file_path, 'a') as f:
+            f.write(f"Params: Mutation Rate={params['mutation_rate']}, Crossover Rate={params['crossover_rate']}, "
+                    f"Population Size={params['popsize']}\n")
+            f.write(f"Fitness: {fitness}\n\n")
+
+
+def evaluate_combination(elitism, gpi, nislands, popsize, mg, mr, cr, n_hidden, experiment_name,
+                                                     enemy, new_evolution, save_gens, num_reps):
+    # Create a new environment for each worker (avoid passing the env object)
+    headless = True
+    if headless:
+        os.environ["SDL_VIDEODRIVER"] = "dummy"
+
+    env = Environment(experiment_name=experiment_name,
+                      enemies=[enemy],
+                      playermode="ai",
+                      player_controller=player_controller(n_hidden),
+                      enemymode="static",
+                      level=2,
+                      speed="fastest",
+                      visuals=False)
+
+    env.state_to_log()
+
+    # Evaluate performance using mean_result_EA1
+    fitness = mean_result_EA2(elitism, gpi, nislands, popsize, mg, mr, cr, n_hidden, experiment_name,
+                                                     env, new_evolution, save_gens, num_reps)
+
+    # Save results to a file
+    save_results(experiment_name, {'elitism': elitism, 'gpi': gpi, 'nislands': nislands}, fitness)
+
+    return fitness
 
 def main():
     '''Main function for basic EA, runs the EA which saves results'''
@@ -54,52 +110,32 @@ def main():
     mr = args.mutation_rate
     n_hidden = args.nhidden
     enemy = args.enemy
-    nislands = args.nislands
-    gpi = args.gen_per_isl
 
-    if isinstance(args.exp_name, str):
-        experiment_name = 'islands_' + args.exp_name
-    else:
-        experiment_name = 'islands_' + input("Enter Experiment (directory) Name:")
-    
-    # add enemy name
-    experiment_name = experiment_name + f'_{enemy}'
-    # directory to save experimental results
+    num_reps = 3
+    save_gens = False #does not work anymore, does not matter what to put here (but don't delete)
+    new_evolution = True #does not work anymore, does not matter what to put here (but don't delete)
+
+    experiment_name = 'EA2_grid_serch' + (args.exp_name if isinstance(args.exp_name, str) else input("Enter Experiment (directory) Name:"))
+    experiment_name += f'_{enemy}'
+
     if not os.path.exists(experiment_name):
         os.makedirs(experiment_name)
-    
-    # choose this for not using visuals and thus making experiments faster
-    headless = True
-    if headless:
-        os.environ["SDL_VIDEODRIVER"] = "dummy"
 
-    # initializes simulation in individual evolution mode, for single static enemy.
-    env = Environment(experiment_name=experiment_name,
-                    enemies=[enemy],
-                    playermode="ai",
-                    player_controller=player_controller(n_hidden), # you  can insert your own controller here
-                    enemymode="static",
-                    level=2,
-                    speed="fastest",
-                    visuals=False)
-    
-    # default environment fitness is assumed for experiment
-    env.state_to_log() # checks environment state
+    # Define grid search ranges for mutation rate, crossover rate, and population size
+    elitism = [0.5, 0.65, 0.8]
+    gpi = [5, 10, 20, 25]
+    nislands = [3, 5, 6]
 
-    if args.test == True:
-        best_solution = np.loadtxt(experiment_name+'/best.txt')
-        print( '\n RUNNING SAVED BEST SOLUTION \n')
-        env.update_parameter('speed','normal')
-        vfitness, vplayerlife, venemylife, vtime = run_game(env, best_solution, test = True)
-        print('vfitness, vplayerlife, venemylife, vtime:\n',
-              vfitness, vplayerlife, venemylife, vtime)
-        sys.exit(0)
+    # Cartesian product of the grid search parameters
+    grid = list(itertools.product(elitism, gpi, nislands))
 
-    if not os.path.exists(experiment_name+'/evoman_solstate'):
-        print( '\nNEW EVOLUTION\n')
-        # with initialization
-        evol_exp = islands(popsize, mg, mr, cr, n_hidden, experiment_name,
-                            env, n_islands=nislands, gen_per_island=gpi)
+    # Run the grid search in parallel using joblib.Parallel
+    Parallel(n_jobs=-1)(delayed(evaluate_combination)(elitism, gpi, nislands, popsize, mg, mr, cr, n_hidden, experiment_name,
+                                                     enemy, new_evolution, save_gens, num_reps)
+                        for elitism, gpi, nislands in grid)
+        
+    #evol_exp = islands(popsize, mg, mr, cr, n_hidden, experiment_name,
+    #                        env, n_islands=nislands, gen_per_island=gpi)
 
 # for parallelization later
 # worker_env = None
@@ -152,7 +188,7 @@ def make_islands(n_islands:int, popsize:int, ind_size:int):
     # islands = np_array (rows = islands, columns = individuals, depth = genes)
     return np.random.uniform(-1.0,1.0,(n_islands, popsize//n_islands, ind_size))
   
-def island_life(island, generations_per_island,env, mr, cr):
+def island_life(island, generations_per_island,env, mr, cr, elitism):
     # island is a 3D array - 1(island) x popsize x n_genes
     popsize, indsize = island.shape[-2:]
     pop = np.reshape(island,(popsize, indsize)) # np 2D array popsize x n_genes
@@ -185,7 +221,7 @@ def island_life(island, generations_per_island,env, mr, cr):
 
         # Survivor selection with elitism & some randomness
         pop, fit = survivor_selection(parents, parent_fitnesses,
-                                      list(offspring_mutated), offspring_fitnesses)
+                                      list(offspring_mutated), offspring_fitnesses, elitism)
         
         # Check for best solution
         best_idx = np.argmax(fit)
@@ -222,10 +258,10 @@ def vectorized_migration(islands: np.ndarray, N: int = 5) -> np.ndarray:
 
 # Define a wrapper for parallelization (joblib)
 def parallel_island_life(island_slice, gen_per_island,
-                         name, contr, enemies, mr, cr):
+                         name, contr, enemies, mr, cr, elitism):
     # Reinitialize or avoid non-picklable objects inside this function if needed
     env = initialize_env(name, contr, enemies)  # Re-initialize the environment inside each worker if necessary
-    return island_life(island_slice, gen_per_island, env, mr, cr)
+    return island_life(island_slice, gen_per_island, env, mr, cr, elitism)
 
 def gain_diversity(env, best_sol, population_genes):
     '''
@@ -244,7 +280,7 @@ def gain_diversity(env, best_sol, population_genes):
 def islands(popsize:int, max_gen:int, mr:float, 
             cr:float, n_hidden_neurons:int,
             experiment_name:str, env:Environment,
-            n_islands:int, gen_per_island:int):
+            n_islands:int, gen_per_island:int, elitism:float):
     '''Basically the big EA loop'''
     # number of weights for multilayer with 10 hidden neurons
     individual_dims = (env.get_num_sensors()+1)*n_hidden_neurons + (n_hidden_neurons+1)*5
@@ -261,7 +297,7 @@ def islands(popsize:int, max_gen:int, mr:float,
     best, bf = [], 0
     for cycle in range(max_gen//gen_per_island):
         # Parallelize island life across islands
-        results = Parallel(n_jobs=-1)(delayed(parallel_island_life)(islands[isl, :, :], gen_per_island, name, contr, enemies, mr, cr) 
+        results = Parallel(n_jobs=-1)(delayed(parallel_island_life)(islands[isl, :, :], gen_per_island, name, contr, enemies, mr, cr, elitism) 
                                       for isl in range(islands.shape[0]))
         
         # Unzip results into evolved islands and best individuals
@@ -380,6 +416,7 @@ def vectorized_parent_selection(population, fitnesses, env: Environment, n_child
     """
     # n_parents = int(len(population) / n_children) * n_children  # Ensure multiple of n_children #OLD WAY: ALSO CHANGE IN EA1
     n_parents = len(population)
+
     # Perform tournament selection for all parents at once
     g_parents = vectorized_tournament_selection(population, fitnesses, n_parents, k)
     

@@ -57,34 +57,6 @@ def save_results(experiment_name, params, fitness):
                     f"Population Size={params['popsize']}\n")
             f.write(f"Fitness: {fitness}\n\n")
 
-def aggregate_results(experiment_name):
-    """ Aggregates the final results and prints the best fitness with parameters """
-    final_file = os.path.join(experiment_name, 'grid_search_results.txt')
-
-    best_fitness = -float('inf')  # Initialize with a very low value
-    best_params = None
-
-    # Read the final results file and find the best fitness
-    with open(final_file, 'r') as infile:
-        lines = infile.readlines()
-
-        # Read two lines at a time (params and fitness)
-        for i in range(0, len(lines), 2):
-            params_line = lines[i]
-            fitness_line = lines[i + 1]
-
-            # Extract the fitness value
-            fitness_value = float(fitness_line.split(":")[1].strip())
-
-            # Check if this is the best fitness so far
-            if fitness_value > best_fitness:
-                best_fitness = fitness_value
-                best_params = params_line
-
-    # Print the best fitness and parameters
-    print("\nBest Fitness:", best_fitness)
-    print("Best Parameters:", best_params)
-
 
 def evaluate_combination(mutation_rate, crossover_rate, popsize, mg, n_hidden, experiment_name, enemy, new_evolution, save_gens, num_reps):
     # Create a new environment for each worker (avoid passing the env object)
@@ -147,7 +119,7 @@ def main():
     grid = list(itertools.product(mutation_rates, crossover_rates, population_sizes))
 
     # Run the grid search in parallel using joblib.Parallel
-    Parallel(n_jobs=-1)(delayed(evaluate_combination)(mutation_rate, crossover_rate, popsize, mg, n_hidden, experiment_name,
+    Parallel(n_jobs=-1)(delayed(evaluate_combination)(mutation_rate, crossover_rate, population_sizes, mg, n_hidden, experiment_name,
                                                      enemy, new_evolution, save_gens, num_reps)
                         for mutation_rate, crossover_rate, popsize in grid)
 
