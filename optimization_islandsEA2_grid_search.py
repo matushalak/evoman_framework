@@ -25,7 +25,10 @@ import argparse
 from joblib import Parallel, delayed
 from pandas import read_csv
 import itertools
-from threading import Lock
+#from threading import Lock
+#from multiprocessing import Manager
+import fcntl
+#file_lock = None
 
 def parse_args():
     '''' Function enabling command-line arguments'''
@@ -54,23 +57,24 @@ def mean_result_EA2(elitism, gpi, nislands, popsize, mg, mr, cr, n_hidden, exper
     return avg_fitness / num_reps
 
 
-def initialize_lock():
-    global file_lock
-    if file_lock is None:
-        file_lock = Lock()  # Initialize the lock for each worker
+# def initialize_lock():
+#     global file_lock
+#     if file_lock is None:
+#         file_lock = manager.Lock()  # Initialize the lock for each worker
 
 def save_results(experiment_name, params, fitness):
     """ Save the fitness and corresponding parameters to a text file with a lock """
-    global file_lock
-    initialize_lock()  # Ensure the lock is initialized in each worker process
+    # global file_lock
+    # initialize_lock()  # Ensure the lock is initialized in each worker process
     file_path = os.path.join(experiment_name, 'grid_search_results.txt')
 
     # Use the file lock to ensure that only one process writes to the file at a time
-    with file_lock:
-        with open(file_path, 'a') as f:
-            f.write(f"Params: Elitism coefficient={params['elitism']}, Generations per island={params['gpi']}, "
-                    f"Number of islands={params['nislands']}\n")
-            f.write(f"Fitness: {fitness}\n\n")
+    with open(file_path, 'a') as f:
+        fcntl.flock(f, fcntl.LOCK_EX)
+        f.write(f"Params: Elitism coefficient={params['elitism']}, Generations per island={params['gpi']}, "
+                f"Number of islands={params['nislands']}\n")
+        f.write(f"Fitness: {fitness}\n\n")
+        fcntl.flock(f, fcntl.LOCK_UN)
 
 
 def evaluate_combination(elitism, gpi, nislands, popsize, mg, mr, cr, n_hidden, experiment_name,
@@ -123,7 +127,7 @@ def main():
 
     # Define grid search ranges for mutation rate, crossover rate, and population size
     elitism = [0.5, 0.65, 0.8]
-    gpi = [5, 10, 20, 25]
+    gpi = [5, 10, 20]
     nislands = [3, 5, 6]
 
     # Cartesian product of the grid search parameters
@@ -414,7 +418,7 @@ def vectorized_tournament_selection(population, fitnesses, n_tournaments):
     return selected_parents
 
 # Parent selection
-def vectorized_parent_selection(population, fitnesses, env: Environment, n_children=2, k=15):
+def vectorized_parent_selection(population, fitnesses, env: Environment, n_children=2):
     """
     Vectorized parent selection using tournament selection.
     """
@@ -422,7 +426,7 @@ def vectorized_parent_selection(population, fitnesses, env: Environment, n_child
     n_parents = len(population)
 
     # Perform tournament selection for all parents at once
-    g_parents = vectorized_tournament_selection(population, fitnesses, n_parents, k)
+    g_parents = vectorized_tournament_selection(population, fitnesses, n_parents)
     
     # Vectorized fitness evaluation of selected parents
     f_parents = evaluate_fitnesses(env, g_parents)
@@ -547,4 +551,7 @@ def vectorized_uncorrelated_mut_one_sigma(individual: np.ndarray, sigma: float,
 #         np.savetxt(experiment_name+'/results.txt',res, header="gen best mean std diversity", fmt = '%.6f')
 
 if __name__ == '__main__':
+    # Initialize the manager and create a lock before running parallel jobs
+    # manager = Manager()
+    # file_lock = manager.Lock()
     main()

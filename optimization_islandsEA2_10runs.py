@@ -351,12 +351,15 @@ def vectorized_fitness_sharing(fitnesses: np.ndarray, population: np.ndarray,
     return shared_fitnesses
 
 # Tournament selection
-def vectorized_tournament_selection(population, fitnesses, n_tournaments, k=2):
+def vectorized_tournament_selection(population, fitnesses, n_tournaments):
     """
     Vectorized tournament selection to select multiple parents in parallel.
     !!! MUCH MORE EFFICIENT!!!
     k SHOULD be ± 10% pop size
     """
+    # k roughly 10 % population size
+    k = round(population.shape[0]/10)
+    k = k if k >= 2 else 2
     # Randomly select k individuals for each tournament (by default with replacement)
     players = np.random.choice(np.arange(len(population)), size=(n_tournaments, k))
 
@@ -369,14 +372,14 @@ def vectorized_tournament_selection(population, fitnesses, n_tournaments, k=2):
     return selected_parents
 
 # Parent selection
-def vectorized_parent_selection(population, fitnesses, env: Environment, n_children=2, k=15):
+def vectorized_parent_selection(population, fitnesses, env: Environment, n_children=2):
     """
     Vectorized parent selection using tournament selection.
     """
-    n_parents = int(len(population) / n_children) * n_children  # Ensure multiple of n_children
+    n_parents = len(population)  # Ensure multiple of n_children
     
     # Perform tournament selection for all parents at once
-    g_parents = vectorized_tournament_selection(population, fitnesses, n_parents, k)
+    g_parents = vectorized_tournament_selection(population, fitnesses, n_parents)
     
     # Vectorized fitness evaluation of selected parents
     f_parents = evaluate_fitnesses(env, g_parents)
