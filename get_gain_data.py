@@ -9,7 +9,7 @@ import json
 import numpy as np
 
 # Set the base folder for dummy data
-base_folder = 'box_plot_gains'
+base_folder = 'box_plot_gains_NO_randini'
 os.makedirs(base_folder, exist_ok=True)
 algorithms = ['EA1', 'EA2']
 folder_names = {
@@ -52,8 +52,8 @@ def main(base_folder,algorithms,enemies,n_hidden,folder_names):
                     enemymode="static",
                     level=2,
                     speed="fastest",
-                    visuals=False,
-                    randomini="yes") # Random ini to not get the same results all the time
+                    visuals=False)#,
+                    #randomini="no") # Random ini to not get the same results all the time
 
     # Go through the algorithms:
     for algo in algorithms:

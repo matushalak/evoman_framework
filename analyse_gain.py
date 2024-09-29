@@ -8,7 +8,7 @@ from scipy import stats
 #set manual input:
 ALGORITHMS = ["EA1", "EA2"] #Order matters for order of plotting
 ENEMIES = [5, 6, 8]  # List of enemies to process
-base_folder = 'box_plot_gains'  # Folder where data is stored
+base_folder = 'box_plot_gains_NO_randini'  # Folder where data is stored
 
 #now, the script starts from: if __name__ == "__main__"
 
@@ -55,7 +55,7 @@ def add_stat_annotation(ax, p_values, df):
         #draw horizontal line between the two boxes
         ax.plot([i - x_shift, i + x_shift], [y, y], lw=1.5, color='black')
         #addthe p-value above the line
-        ax.text(i, y + 0.5, f"p = {p_values[i]:.4f}", ha='center', va='bottom', color='black')
+        ax.text(i, y + 0.5, f"p = {p_values[i]:.4f}", ha='center', va='bottom', color='black', fontsize=10)
 
     return 0
 
@@ -75,12 +75,13 @@ def generate_boxplots(df, p_values, ENEMIES):
     sns.despine(ax=ax, top=True, right=True)
 
     #set the labels,    TO DO: make label names manual input?
-    ax.set_xticklabels([f'Enemy {enemy}' for enemy in ENEMIES], fontsize=8)
-    ax.set_xlabel('Experiment name', fontsize=12)
-    ax.set_ylabel('Individual gain', fontsize=12)
+    ax.set_xticklabels([f'Enemy {enemy}' for enemy in ENEMIES], fontsize=12)
+    ax.set_xlabel('Experiment name', fontsize=14)
+    ax.set_ylabel('Individual gain', fontsize=14)
+    ax.set_title('Mean individual gain of every best performing individual out of 10 optimizations', fontsize=15)
     
     plt.tight_layout()
-    plt.savefig('box_plot.png')  # Uncomment to save the figure
+    plt.savefig('box_plot2.png')  # Uncomment to save the figure
     plt.show()
 
 def perform_statistical_tests(df, enemies, algorithms):
