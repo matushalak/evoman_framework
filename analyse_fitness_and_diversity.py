@@ -12,10 +12,12 @@ enemies_to_evaluate = [5, 6, 8]
 # Base directories for both algorithms
 algorithm_dirs = {
     'Algorithm 1': 'EA1_line_plot_runs',
-    'Algorithm 2': 'matusEA2exp'
+    'Algorithm 2': 'EA2_final'
 }
 
-def process_results_for_enemy(base_folder, enemy, algorithm):
+max_gen = 50 # Set the maximum generation up to where to want to plot and do statistical tests
+
+def process_results_for_enemy(base_folder, enemy, algorithm, max_gen=None):
     """
     Process the results for a given enemy for one algorithm, handling different logging formats.
     """
@@ -51,6 +53,10 @@ def process_results_for_enemy(base_folder, enemy, algorithm):
                     # Convert the 'gen' column to integer since it's stored as float
                     df['gen'] = df['gen'].astype(int)
                     
+                # Filter rows based on max generation if max_gen is set
+                if max_gen is not None:
+                    df = df[df['gen'] <= max_gen]
+                
                 # Ensure valid numeric data
                 df = df[pd.to_numeric(df['best'], errors='coerce').notnull()]
 
@@ -138,7 +144,7 @@ def make_subplots_across_enemies(algorithm_dfs_dict, enemies):
     plt.savefig('line_plots_3x2.png')  # Uncomment to save the figure
     plt.show()
 
-def process_across_enemies(enemies_to_evaluate, algorithm_dirs):
+def process_across_enemies(enemies_to_evaluate, algorithm_dirs, max_gen=None):
     """
     Process results for all enemies and both algorithms, and generate n x 2 subplots for fitness and diversity.
     """
@@ -152,7 +158,7 @@ def process_across_enemies(enemies_to_evaluate, algorithm_dirs):
 
         # Process results for both algorithms
         for algorithm_name, base_folder in algorithm_dirs.items():
-            df = process_results_for_enemy(base_folder, enemy, algorithm_name)
+            df = process_results_for_enemy(base_folder, enemy, algorithm_name, max_gen)
             algorithm_dfs[algorithm_name] = df
         
         # Store the results for this enemy
@@ -288,7 +294,7 @@ def perform_stats_test(algorithm_dfs_dict, enemies):
 # Main script
 if __name__ == "__main__":
     # Process and plot the results for the selected enemies
-    algorithm_dfs_dict = process_across_enemies(enemies_to_evaluate, algorithm_dirs)
+    algorithm_dfs_dict = process_across_enemies(enemies_to_evaluate, algorithm_dirs, max_gen)
 
     # Generate subplots for all enemies with separate fitness and diversity plots
     make_subplots_across_enemies(algorithm_dfs_dict, enemies_to_evaluate)
