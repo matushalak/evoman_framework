@@ -52,7 +52,8 @@ def main(base_folder,algorithms,enemies,n_hidden,folder_names):
                     enemymode="static",
                     level=2,
                     speed="fastest",
-                    visuals=False) #DO RANDOM INI!!
+                    visuals=False,
+                    randomini="yes") #DO RANDOM INI!!
 
     # Go through the algorithms:
     for algo in algorithms:
