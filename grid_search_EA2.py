@@ -1,6 +1,6 @@
 ###############################################################################
-# Author: Matus Halak       			                                      #
-# matus.halak@gmail.com   
+# Authors: Matus Halak, Rick Geling, Rens Koppelman, Isis van Loenen
+# matus.halak@gmail.com, rickgeling@gmail.com   
 # 
 # In this script I implement Speciation (ISLANDS MODEL) as a way to increase diversity
 # GOALS: also implement uncorrelated mutation with N sigmas!!! (put also in basic script)
@@ -56,11 +56,10 @@ def mean_result_EA2(elitism, gpi, nislands, popsize, mg, mr, cr, n_hidden, exper
 
     return avg_fitness / num_reps
 
-
 # def initialize_lock():
 #     global file_lock
 #     if file_lock is None:
-#         file_lock = manager.Lock()  # Initialize the lock for each worker
+#         file_lock = manager.Lock()  #initialize the lock for each worker
 
 def save_results(experiment_name, params, fitness):
     """ Save the fitness and corresponding parameters to a text file with a lock """
@@ -79,7 +78,7 @@ def save_results(experiment_name, params, fitness):
 
 def evaluate_combination(elitism, gpi, nislands, popsize, mg, mr, cr, n_hidden, experiment_name,
                                                      enemy, new_evolution, save_gens, num_reps):
-    # Create a new environment for each worker (avoid passing the env object)
+    #create a new environment for each worker (avoid passing the env object)
     headless = True
     if headless:
         os.environ["SDL_VIDEODRIVER"] = "dummy"
@@ -95,11 +94,10 @@ def evaluate_combination(elitism, gpi, nislands, popsize, mg, mr, cr, n_hidden, 
 
     env.state_to_log()
 
-    # Evaluate performance using mean_result_EA1
+    #evaluate performance using mean_result_EA1
     fitness = mean_result_EA2(elitism, gpi, nislands, popsize, mg, mr, cr, n_hidden, experiment_name,
                                                      env, new_evolution, save_gens, num_reps)
-
-    # Save results to a file
+    #save results to a file
     save_results(experiment_name, {'elitism': elitism, 'gpi': gpi, 'nislands': nislands}, fitness)
 
     return fitness
@@ -125,24 +123,20 @@ def main():
     if not os.path.exists(experiment_name):
         os.makedirs(experiment_name)
 
-    # Define grid search ranges for mutation rate, crossover rate, and population size
+    #define grid search ranges for mutation rate, crossover rate, and population size
     elitism = [0.5, 0.65, 0.8]
     gpi = [5, 10, 20]
     nislands = [3, 5, 6]
 
-    # Cartesian product of the grid search parameters
+    #cartesian product of the grid search parameters
     grid = list(itertools.product(elitism, gpi, nislands))
 
-    # Run the grid search in parallel using joblib.Parallel
+    #run the grid search in parallel using joblib.Parallel
     Parallel(n_jobs=-1)(delayed(evaluate_combination)(elitism, gpi, nislands, popsize, mg, mr, cr, n_hidden, experiment_name,
                                                      enemy, new_evolution, save_gens, num_reps)
                         for elitism, gpi, nislands in grid)
-        
-    #evol_exp = islands(popsize, mg, mr, cr, n_hidden, experiment_name,
-    #                        env, n_islands=nislands, gen_per_island=gpi)
 
-# for parallelization later
-# worker_env = None
+
 def initialize_env(name, contr, enemies):
     enviro =  Environment(experiment_name=name,
                         enemies=enemies,

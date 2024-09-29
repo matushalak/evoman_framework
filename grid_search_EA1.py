@@ -1,6 +1,6 @@
 ###############################################################################
-# Author: Matus Halak       			                                      #
-# matus.halak@gmail.com     				                                  #
+# Authors: Matus Halak, Rick Geling, Rens Koppelman, Isis van Loenen
+# matus.halak@gmail.com, rickgeling@gmail.com   
 ###############################################################################
 
 # imports framework
@@ -20,6 +20,7 @@ import random
 
 
 file_lock = None
+
 
 def parse_args():
     '''' Function enabling command-line arguments'''
@@ -47,10 +48,10 @@ def initialize_lock():
 def save_results(experiment_name, params, fitness):
     """ Save the fitness and corresponding parameters to a text file with a lock """
     global file_lock
-    initialize_lock()  # Ensure the lock is initialized in each worker process
+    initialize_lock()  #ensure the lock is initialized in each worker process
     file_path = os.path.join(experiment_name, 'grid_search_results.txt')
 
-    # Use the file lock to ensure that only one process writes to the file at a time
+    #use the file lock to ensure that only one process writes to the file at a time
     with file_lock:
         with open(file_path, 'a') as f:
             f.write(f"Params: Mutation Rate={params['mutation_rate']}, Crossover Rate={params['crossover_rate']}, "
@@ -59,7 +60,7 @@ def save_results(experiment_name, params, fitness):
 
 
 def evaluate_combination(mutation_rate, crossover_rate, popsize, mg, n_hidden, experiment_name, enemy, new_evolution, save_gens, num_reps):
-    # Create a new environment for each worker (avoid passing the env object)
+    #create new environment for each worker (avoid passing the env object)
     headless = True
     if headless:
         os.environ["SDL_VIDEODRIVER"] = "dummy"
@@ -75,7 +76,7 @@ def evaluate_combination(mutation_rate, crossover_rate, popsize, mg, n_hidden, e
 
     env.state_to_log()
 
-    # Set the hyperparameters
+    #set the hyperparameters
     scaling_factor = 0.15
     sigma_prime = 0.05
     alpha = 0.5
@@ -84,10 +85,9 @@ def evaluate_combination(mutation_rate, crossover_rate, popsize, mg, n_hidden, e
 
     hyperparameters = (scaling_factor, sigma_prime, alpha, tournament_size, elite_fraction, mutation_rate, crossover_rate)
 
-    # Evaluate performance using mean_result_EA1
+    #evaluate performance using mean_result_EA1
     fitness = mean_result_EA1(hyperparameters, popsize, mg, n_hidden, experiment_name, env, new_evolution, save_gens, num_reps)
-
-    # Save results to a file
+    #save results to a file
     save_results(experiment_name, {'mutation_rate': mutation_rate, 'crossover_rate': crossover_rate, 'popsize': popsize}, fitness)
 
     return fitness
@@ -110,26 +110,18 @@ def main():
     if not os.path.exists(experiment_name):
         os.makedirs(experiment_name)
 
-    # Define grid search ranges for mutation rate, crossover rate, and population size
+    #define grid search ranges for mutation rate, crossover rate, and population size
     mutation_rates = [0.05, 0.25, 0.45, 0.65, 0.85]
     crossover_rates = [0.05, 0.25, 0.45, 0.65, 0.85]
     population_sizes = [100, 150, 200]
 
-    # Cartesian product of the grid search parameters
+    #cartesian product of the grid search parameters
     grid = list(itertools.product(mutation_rates, crossover_rates, population_sizes))
 
-    # Run the grid search in parallel using joblib.Parallel
+    #run the grid search in parallel using joblib.Parallel
     Parallel(n_jobs=-1)(delayed(evaluate_combination)(mutation_rate, crossover_rate, population_sizes, mg, n_hidden, experiment_name,
                                                      enemy, new_evolution, save_gens, num_reps)
                         for mutation_rate, crossover_rate, popsize in grid)
-
-
-
-
-# for parallelization later
-# worker_env = None
-
-
 
 
 # # runs game (evaluate fitness for 1 individual)

@@ -1,3 +1,8 @@
+###############################################################################
+# Authors: Matus Halak, Rick Geling, Rens Koppelman, Isis van Loenen
+# matus.halak@gmail.com, rickgeling@gmail.com   
+###############################################################################
+
 import os
 import json
 import pandas as pd
@@ -7,8 +12,9 @@ from scipy import stats
 
 #set manual input:
 ALGORITHMS = ["EA1", "EA2"] #Order matters for order of plotting
-ENEMIES = [5, 6, 8]  # List of enemies to process
-base_folder = 'box_plot_gains_NO_randini'  # Folder where data is stored
+enemies = [5, 6, 8]  # List of enemies to process
+base_folder = 'gain_results'  # Folder where data is stored
+custom_legend_labels = ["Baseline EA", "IM-EA"]
 
 #now, the script starts from: if __name__ == "__main__"
 
@@ -46,7 +52,7 @@ def add_stat_annotation(ax, p_values, df):
     y_offsets = [5, 5, 5]  #increasethis value to raise the line higher above the boxes
     x_shift = 0.25  #control space between boxes
     
-    for i, enemy in enumerate(ENEMIES):
+    for i, enemy in enumerate(enemies):
         algo1_data = df[(df['Enemy'] == enemy) & (df['Algorithm'] == ALGORITHMS[0])]['Gain']
         algo2_data = df[(df['Enemy'] == enemy) & (df['Algorithm'] == ALGORITHMS[1])]['Gain']
         y_max = max(max(algo1_data), max(algo2_data))
@@ -55,11 +61,11 @@ def add_stat_annotation(ax, p_values, df):
         #draw horizontal line between the two boxes
         ax.plot([i - x_shift, i + x_shift], [y, y], lw=1.5, color='black')
         #addthe p-value above the line
-        ax.text(i, y + 0.5, f"p = {p_values[i]:.4f}", ha='center', va='bottom', color='black', fontsize=10)
+        ax.text(i, y + 0.5, f"p = {p_values[i]:.4f}", ha='center', va='bottom', color='black', fontsize=12)
 
     return 0
 
-def generate_boxplots(df, p_values, ENEMIES):
+def generate_boxplots(df, p_values, enemies, legend_labels=None):
 
     plt.figure(figsize=(10, 6))
 
@@ -75,13 +81,19 @@ def generate_boxplots(df, p_values, ENEMIES):
     sns.despine(ax=ax, top=True, right=True)
 
     #set the labels,    TO DO: make label names manual input?
-    ax.set_xticklabels([f'Enemy {enemy}' for enemy in ENEMIES], fontsize=12)
-    ax.set_xlabel('Experiment name', fontsize=14)
-    ax.set_ylabel('Individual gain', fontsize=14)
-    ax.set_title('Mean individual gain of every best performing individual out of 10 optimizations', fontsize=15)
+    ax.set_xticklabels([f'Enemy {enemy}' for enemy in enemies], fontsize=14)
+    ax.set_xlabel('', fontsize=16)
+    ax.set_ylabel('Individual gain', fontsize=16)
+    #ax.set_title('Mean individual gain of every best performing individual out of 10 optimizations', fontsize=15)
+    # Set custom legend labels if provided
+    if legend_labels is not None:
+        handles, _ = ax.get_legend_handles_labels()
+        ax.legend(handles, legend_labels, loc='lower right', fontsize=12)
+    else:
+        ax.legend(loc='lower right', fontsize=12)
     
     plt.tight_layout()
-    plt.savefig('box_plot2.png')  # Uncomment to save the figure
+    plt.savefig('box_plot.png')  # Uncomment to save the figure
     plt.show()
 
 def perform_statistical_tests(df, enemies, algorithms):
@@ -112,14 +124,14 @@ def print_median_gains(df, algorithms, enemies):
 if __name__ == "__main__":
 
     #step 1: Gather data from JSON files
-    df = gather_data(base_folder, ALGORITHMS, ENEMIES)
+    df = gather_data(base_folder, ALGORITHMS, enemies)
 
     #step 2: Perform statistical tests to compare the algorithms
-    p_values = perform_statistical_tests(df, ENEMIES, ALGORITHMS)
+    p_values = perform_statistical_tests(df, enemies, ALGORITHMS)
 
     #step 3: print the median of the gains
-    print_median_gains(df, ALGORITHMS, ENEMIES)
+    print_median_gains(df, ALGORITHMS, enemies)
 
     #step 4: Generate boxplots comparing the algorithms for each enemy and include p-values
-    generate_boxplots(df, p_values, ENEMIES)
+    generate_boxplots(df, p_values, enemies, custom_legend_labels)
 
