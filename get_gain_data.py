@@ -12,6 +12,10 @@ import numpy as np
 base_folder = 'box_plot_gains'
 os.makedirs(base_folder, exist_ok=True)
 algorithms = ['EA1', 'EA2']
+folder_names = {
+    'EA1': 'EA1_line_plot_runs',  # Folder for EA1
+    'EA2': 'matusEA2exp'  # Folder for EA2
+}
 enemies = [5, 6, 8]
 n_hidden = 10
 
@@ -34,7 +38,7 @@ def run_game(env:Environment, individual):
 
     return fitness,p,e,t
 
-def main(base_folder,algorithms,enemies,n_hidden):
+def main(base_folder,algorithms,enemies,n_hidden,folder_names):
 
     # choose this for not using visuals and thus making experiments faster
     headless = True
@@ -61,7 +65,7 @@ def main(base_folder,algorithms,enemies,n_hidden):
 
             # Iterate through the runs (1 to 10)
             for run in range(1, 11):
-                folder_name = f"{algo}_line_plot_runs"
+                folder_name = folder_names[algo]
                 run_folder = os.path.join(folder_name, f'EN{enemy}', f'run_{run}_EN{enemy}')
                 alltime_file = os.path.join(run_folder, 'alltime.txt')
                 
@@ -123,4 +127,4 @@ def main(base_folder,algorithms,enemies,n_hidden):
 #     # }
 
 if __name__ == "__main__":
-    main(base_folder,algorithms,enemies,n_hidden)
+    main(base_folder,algorithms,enemies,n_hidden,folder_names)

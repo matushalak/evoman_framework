@@ -96,6 +96,15 @@ def perform_statistical_tests(df, enemies, algorithms):
 
     return p_values
 
+# Function to calculate and print median gain
+def print_median_gains(df, algorithms, enemies):
+    for enemy in enemies:
+        for algo in algorithms:
+            algo_gains = df[(df['Enemy'] == enemy) & (df['Algorithm'] == algo)]['Gain']
+            median_gain = algo_gains.median()
+            print(f"Median gain for {algo} on Enemy {enemy}: {median_gain:.2f}")
+
+
 #main script
 if __name__ == "__main__":
 
@@ -105,5 +114,9 @@ if __name__ == "__main__":
     #step 2: Perform statistical tests to compare the algorithms
     p_values = perform_statistical_tests(df, ENEMIES, ALGORITHMS)
 
-    #step 3: Generate boxplots comparing the algorithms for each enemy and include p-values
+    #step 3: print the median of the gains
+    print_median_gains(df, ALGORITHMS, ENEMIES)
+
+    #step 4: Generate boxplots comparing the algorithms for each enemy and include p-values
     generate_boxplots(df, p_values, ENEMIES)
+
