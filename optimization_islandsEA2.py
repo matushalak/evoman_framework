@@ -32,14 +32,14 @@ def parse_args():
 
     # Define arguments
     parser.add_argument('-name', '--exp_name', type=str, required=False, help="Experiment name")
-    parser.add_argument('-pop', '--popsize', type=int, required=False, default = 100, help="Population size (eg. 100)")
-    parser.add_argument('-mg', '--maxgen', type=int, required=False, default = 500, help="Max generations (eg. 500)")
-    parser.add_argument('-cr', '--crossover_rate', type=float, required=False, default = 0.5, help="Crossover rate (e.g., 0.8)")
-    parser.add_argument('-mr', '--mutation_rate', type=float, required=False, default = 0.1, help="Mutation rate (e.g., 0.05)")
+    parser.add_argument('-pop', '--popsize', type=int, required=False, default = 120, help="Population size (eg. 100)")
+    parser.add_argument('-mg', '--maxgen', type=int, required=False, default = 100, help="Max generations (eg. 500)")
+    parser.add_argument('-cr', '--crossover_rate', type=float, required=False, default = 0.85, help="Crossover rate (e.g., 0.8)")
+    parser.add_argument('-mr', '--mutation_rate', type=float, required=False, default = 0.25, help="Mutation rate (e.g., 0.05)")
     parser.add_argument('-nh', '--nhidden', type=int, required=False, default = 10, help="Number of Hidden Neurons (eg. 10)")
     parser.add_argument('-tst', '--test', type=bool, required=False, default = False, help="Train or Test (default = Train)")
-    parser.add_argument('-nme', '--enemy', type=int, required=False, default = 2, help="Select Enemy")
-    parser.add_argument('-nislands','--nislands', type = int, required = False, default = 5, help = 'Select number of islands')
+    parser.add_argument('-nme', '--enemy', type=int, required=False, default = 5, help="Select Enemy")
+    parser.add_argument('-nislands','--nislands', type = int, required = False, default = 6, help = 'Select number of islands')
     parser.add_argument('-gpi', '--gen_per_isl', type = int, required=False, default=10, help='Generations / island')
 
     return parser.parse_args()
@@ -306,8 +306,14 @@ def process_gen_data(gen_fits, gen_pops, cycle):
     # stds
     gen_stds = np.std(gens_fits, axis = 2).std(axis = 0) # 10 values
     # Diversity (ISLANDS 4D): island : generation : individuals : gene 
-    genewise_stds = np.std(gens_pops, axis = 2) # per gene, across individuals
-    diversity = np.mean(genewise_stds, axis = 2).mean(axis = 0) # 10 values
+    nislands, ngens, ninds, ngenes = gens_pops.shape 
+
+    # Combine the islands and individuals dimensions into one
+    gens_pops_for_diversity = gens_pops.reshape(ngens, nislands * ninds, ngenes)
+
+    # Calculate standard deviations per gene across the combined individuals
+    genewise_stds = np.std(gens_pops_for_diversity, axis=1) # Standard deviation per gene, across individuals
+    diversity = np.mean(genewise_stds, axis=1)  # Mean diversity per generation
 
     rows = np.arange(round(0+diversity.shape[0]*cycle), 
                      round(diversity.shape[0]+diversity.shape[0]*cycle))
@@ -372,8 +378,8 @@ def vectorized_parent_selection(population, fitnesses, env: Environment, n_child
     """
     Vectorized parent selection using tournament selection.
     """
-    n_parents = int(len(population) / n_children) * n_children  # Ensure multiple of n_children
-    
+    # n_parents = int(len(population) / n_children) * n_children  # Ensure multiple of n_children #OLD WAY: ALSO CHANGE IN EA1
+    n_parents = len(population)
     # Perform tournament selection for all parents at once
     g_parents = vectorized_tournament_selection(population, fitnesses, n_parents, k)
     
