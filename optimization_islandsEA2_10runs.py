@@ -3,12 +3,9 @@
 # matus.halak@gmail.com   
 # 
 # In this script I implement Speciation (ISLANDS MODEL) as a way to increase diversity
-# GOALS: also implement uncorrelated mutation with N sigmas!!! (put also in basic script)
-# Figure out how to use numpy arrays preferably
-# save results with a function
 
 # good parameters: pop 100/120/140/150; nislands 4/5/6/7 gpi 10/20 mr .6 cr.3 ()
-# python optimization_islandsEA2.py -nme 7 -pop 120 -mg 100 -name test -mr .6 -cr .3 -gpi 10 -nislands 5  
+# python optimization_islandsEA2_10runs.py -pop 120 -gpi 20 -nislands 3 (elitism coefficient = .65)  
 ###############################################################################
 
 # imports framework
@@ -32,7 +29,7 @@ def parse_args():
 
     # Define arguments
     parser.add_argument('-name', '--exp_name', type=str, required=False, help="Experiment name")
-    parser.add_argument('-pop', '--popsize', type=int, required=False, default = 150, help="Population size (eg. 100)")
+    parser.add_argument('-pop', '--popsize', type=int, required=False, default = 120, help="Population size (eg. 100)")
     parser.add_argument('-mg', '--maxgen', type=int, required=False, default = 100, help="Max generations (eg. 500)")
     parser.add_argument('-cr', '--crossover_rate', type=float, required=False, default = 0.85, help="Crossover rate (e.g., 0.8)")
     parser.add_argument('-mr', '--mutation_rate', type=float, required=False, default = 0.25, help="Mutation rate (e.g., 0.05)")
@@ -387,11 +384,12 @@ def vectorized_parent_selection(population, fitnesses, env: Environment, n_child
 
 # Survivor selection with elitism and random diversity preservation
 def survivor_selection(parents, parent_fitnesses, 
-                       offspring, offspring_fitnesses, elite_fraction=0.8):
+                       offspring, offspring_fitnesses, elite_fraction=0.65):
     """
     Select survivors using elitism with some randomness to maintain diversity.
     Fixed a MAJOR MISTAKE HERE! 
     (had to do with adding numpy arrays - X CONCATENATE!!!)
+    Elite fraction .65 from TUNING
     """
     # Combine parents and offspring
     total_population = np.vstack([parents, offspring])
