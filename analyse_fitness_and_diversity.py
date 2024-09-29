@@ -15,7 +15,9 @@ algorithm_dirs = {
     'Algorithm 2': 'EA2_final'
 }
 
-max_gen = 50 # Set the maximum generation up to where to want to plot and do statistical tests
+# Set the maximum generation up to where to want to plot and do statistical tests
+max_gen = 50 # To avoid showing redundant information in the report
+
 
 def process_results_for_enemy(base_folder, enemy, algorithm, max_gen=None):
     """
@@ -141,7 +143,7 @@ def make_subplots_across_enemies(algorithm_dfs_dict, enemies):
 
     # Adjust layout to prevent overlap between subplots
     plt.tight_layout(pad=3.0)
-    plt.savefig('line_plots_3x2.png')  # Uncomment to save the figure
+    plt.savefig('line_plots.png')  # Uncomment to save the figure
     plt.show()
 
 def process_across_enemies(enemies_to_evaluate, algorithm_dirs, max_gen=None):

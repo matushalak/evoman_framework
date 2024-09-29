@@ -79,6 +79,8 @@ def generate_boxplots(df, p_values, ENEMIES):
     ax.set_xlabel('Experiment name', fontsize=12)
     ax.set_ylabel('Individual gain', fontsize=12)
     
+    plt.tight_layout()
+    plt.savefig('box_plot.png')  # Uncomment to save the figure
     plt.show()
 
 def perform_statistical_tests(df, enemies, algorithms):

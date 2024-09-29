@@ -14,7 +14,7 @@ os.makedirs(base_folder, exist_ok=True)
 algorithms = ['EA1', 'EA2']
 folder_names = {
     'EA1': 'EA1_line_plot_runs',  # Folder for EA1
-    'EA2': 'matusEA2exp'  # Folder for EA2
+    'EA2': 'EA2_final'  # Folder for EA2
 }
 enemies = [5, 6, 8]
 n_hidden = 10
@@ -53,7 +53,7 @@ def main(base_folder,algorithms,enemies,n_hidden,folder_names):
                     level=2,
                     speed="fastest",
                     visuals=False,
-                    randomini="yes") #DO RANDOM INI!!
+                    randomini="yes") # Random ini to not get the same results all the time
 
     # Go through the algorithms:
     for algo in algorithms:
