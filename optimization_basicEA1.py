@@ -30,7 +30,8 @@ def parse_args():
     parser.add_argument('-mr', '--mutation_rate', type=float, required=False, default = 0.25, help="Mutation rate (e.g., 0.05)")
     parser.add_argument('-nh', '--nhidden', type=int, required=False, default = 10, help="Number of Hidden Neurons (eg. 10)")
     parser.add_argument('-tst', '--test', type=bool, required=False, default = False, help="Train or Test (default = Train)")
-    parser.add_argument('-nme', '--enemy', type=int, required=False, default = 5, help="Select Enemy")
+    parser.add_argument('-nmes', '--enemies', nargs = '+', type = int, required=True, default = False, help='Provide list of enemies to train against')
+    parser.add_argument('-mult', '--multi', type=str, required=False, default = 'yes', help="Single or Multienemy")
 
     return parser.parse_args()
 
@@ -43,7 +44,9 @@ def main():
     cr = args.crossover_rate
     mr = args.mutation_rate
     n_hidden = args.nhidden
-    enemy = args.enemy
+    enemies = args.enemies
+    global multi  
+    multi  = 'yes' if args.multi == 'yes' else 'no'
 
     if isinstance(args.exp_name, str):
         experiment_name = 'basic_' + args.exp_name
@@ -51,7 +54,7 @@ def main():
         experiment_name = 'basic_' + input("Enter Experiment (directory) Name:")
     
     # add enemy name
-    experiment_name = experiment_name + f'_{enemy}'
+    experiment_name = experiment_name + '_' + f'{str(enemies).strip('[]').replace(',', '').replace(' ', '')}'
     # directory to save experimental results
     if not os.path.exists(experiment_name):
         os.makedirs(experiment_name)
@@ -63,7 +66,8 @@ def main():
 
     # initializes simulation in individual evolution mode, for single static enemy.
     env = Environment(experiment_name=experiment_name,
-                    enemies=[enemy],
+                    enemies=enemies,
+                    multiplemode=multi, 
                     playermode="ai",
                     player_controller=player_controller(n_hidden), # you  can insert your own controller here
                     enemymode="static",
@@ -103,7 +107,10 @@ def run_game(env:Environment,individual, test=False):
         breakpoint()
     fitness ,p,e,t = env.play(pcont=individual)
     if test == False:
-        return fitness
+        if 4 in env.enemies:
+            return (p-(2*e)) - 0.01*t
+        else: 
+            return fitness
     else:
         return fitness ,p,e,t
 
@@ -125,6 +132,7 @@ def run_game_in_worker(name, contr, enemies, ind):
     # if worker_env is None:
     worker_env = Environment(experiment_name=name,
                             enemies=enemies,
+                            multiplemode=multi,
                             playermode="ai",
                             player_controller=contr, # you  can insert your own controller here
                             enemymode="static",
