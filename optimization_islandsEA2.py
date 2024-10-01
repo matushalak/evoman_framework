@@ -297,15 +297,14 @@ def process_gen_data(gen_fits, gen_pops, cycle):
     gen_means = np.mean(gens_fits, axis = 2).mean(axis = 0) # 10 values
     # stds
     gen_stds = np.std(gens_fits, axis = 2).std(axis = 0) # 10 values
+    
     # Diversity (ISLANDS 4D): island : generation : individuals : gene 
     nislands, ngens, ninds, ngenes = gens_pops.shape 
-
     # Combine the islands and individuals dimensions into one
-    gens_pops_for_diversity = gens_pops.reshape(ngens, nislands * ninds, ngenes)
-
+    gens_pops_for_diversity = gens_pops.reshape((ngens, nislands * ninds, ngenes))
     # Calculate standard deviations per gene across the combined individuals
     genewise_stds = np.std(gens_pops_for_diversity, axis=1) # Standard deviation per gene, across individuals
-    diversity = np.mean(genewise_stds, axis=1)  # Mean diversity per generation
+    diversity = np.mean(genewise_stds, axis=1)  # Mean diversity across genes per generation
 
     rows = np.arange(round(0+diversity.shape[0]*cycle), 
                      round(diversity.shape[0]+diversity.shape[0]*cycle))
