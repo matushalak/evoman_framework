@@ -121,7 +121,7 @@ def run_game(env:Environment,individual, test=False):
     if test == False:
         # for enemy 4 make fitness function just based on killing enemy 4 
         if 4 in env.enemies:
-            return (100 - (0.9*e)) - 0.1*t
+            return (p-(2*e)) - 0.01*t
         else:
             return fitness
     else:
@@ -172,7 +172,7 @@ def island_life(island, generations_per_island,env, mr, cr):
     for g in range(generations_per_island):
         # niching
         # shared_fit = vectorized_fitness_sharing(fit, pop, [-1.0, 1.0]) # np 1d array popsize
-        shared_fit = fit
+        shared_fit = fit # no niching
         # Parent selection: (Tournament? - just first try) Probability based - YES
         parents, parent_fitnesses = vectorized_parent_selection(pop, shared_fit, env) # np 2d array (popsize x n_genes) & np 1d array popsize
 
@@ -280,10 +280,12 @@ def islands(popsize:int, max_gen:int, mr:float,
         fin = time.time()
         gain, diversity = gain_diversity(env, islands_best[i_best][0] ,islands_evolved)
         print(f'Cycle {cycle} best fitness: {islands_best[i_best][-1]}, mean fitness: {np.mean(fitnesses_evoled)}, SD fitness: {np.std(fitnesses_evoled)} , DIVERSITY: {diversity} , t:{fin-ini}')
+        bf = islands_best[i_best][-1] if cycle == 0 else bf # to enable saving alltime with different fitness functions
         if islands_best[i_best][-1] > bf:
             best = islands_best[i_best][0]
             bf = islands_best[i_best][-1]
             np.savetxt(experiment_name+'/alltime.txt',best)
+            print('Updated best')
         # migrate between islands
         np.random.shuffle(islands_evolved) # get rid of order
         islands = np.array(vectorized_migration(islands_evolved)).reshape((n_islands,-1, individual_dims))
