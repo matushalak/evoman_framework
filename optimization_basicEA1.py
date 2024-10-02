@@ -32,6 +32,7 @@ def parse_args():
     parser.add_argument('-tst', '--test', type=bool, required=False, default = False, help="Train or Test (default = Train)")
     parser.add_argument('-nmes', '--enemies', nargs = '+', type = int, required=True, default = False, help='Provide list of enemies to train against')
     parser.add_argument('-mult', '--multi', type=str, required=False, default = 'yes', help="Single or Multienemy")
+    parser.add_argument('-fit', '--fitness_func', type=str, required=False, default='old', help = 'Which Fitness function to use? [old / new]')
 
     return parser.parse_args()
 
@@ -45,8 +46,11 @@ def main():
     mr = args.mutation_rate
     n_hidden = args.nhidden
     enemies = args.enemies
-    global multi  
+    global multi, fitfunc  
     multi  = 'yes' if args.multi == 'yes' else 'no'
+    fitfunc = args.fitness_func
+    if fitfunc == 'new':
+        print('Using new fitness function')
 
     if isinstance(args.exp_name, str):
         experiment_name = 'basic_' + args.exp_name
@@ -107,7 +111,7 @@ def run_game(env:Environment,individual, test=False):
         breakpoint()
     fitness ,p,e,t = env.play(pcont=individual)
     if test == False:
-        if 4 in env.enemies:
+        if fitfunc == 'new':
             return (p-(2*e)) - 0.01*t
         else: 
             return fitness
