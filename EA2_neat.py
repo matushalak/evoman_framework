@@ -27,40 +27,35 @@ def parse_args():
     
     return parser.parse_args()
 
-def main():
-    '''Main function for basic EA, runs the EA which saves results'''
-    # command line arguments for experiment parameters
-    args = parse_args()
-    global env, cfg, name, enemies, multi, maxgen
-    cfg = 'neat_config.txt'
-    maxgen = args.maxgen
-    enemies = args.enemies
-    multi  = 'yes' if args.multi == 'yes' else 'no'
+args = parse_args()
+global env, cfg, name, enemies, multi, maxgen
+cfg = 'neat_config.txt'
+maxgen = args.maxgen
+enemies = args.enemies
+multi  = 'yes' if args.multi == 'yes' else 'no'
 
-    if isinstance(args.exp_name, str):
-        name = 'neat_' + args.exp_name
-    else:
-        name = 'neat_' + input("Enter Experiment (directory) Name:")
+if isinstance(args.exp_name, str):
+    name = 'neat_' + args.exp_name
+else:
+    name = 'neat_' + input("Enter Experiment (directory) Name:")
 
-    # add enemy names
-    name = name + '_' + f'{str(enemies).strip('[]').replace(',', '').replace(' ', '')}'
-    if not os.path.exists(name):
-        os.makedirs(name)
+# add enemy names
+name = name + '_' + f'{str(enemies).strip('[]').replace(',', '').replace(' ', '')}'
+if not os.path.exists(name):
+    os.makedirs(name)
 
-    env = Environment(experiment_name=name,
-                    enemies=enemies,
-                    multiplemode=multi, 
-                    playermode="ai",
-                    player_controller=neat_controller(config_path=cfg), # you  can insert your own controller here
-                    enemymode="static",
-                    level=2,
-                    speed="fastest",
-                    visuals=False)
+env = Environment(experiment_name=name,
+                enemies=enemies,
+                multiplemode=multi, 
+                playermode="ai",
+                player_controller=neat_controller(config_path=cfg), # you  can insert your own controller here
+                enemymode="static",
+                level=2,
+                speed="fastest",
+                visuals=False)
 
-    os.environ["SDL_VIDEODRIVER"] = "dummy"
+os.environ["SDL_VIDEODRIVER"] = "dummy"
 
-    run(config_path=cfg)
-    
 def eval_genome(genome,config):
     '''
     Parallelized version
@@ -113,4 +108,4 @@ def run(config_path):
     print('\nBest genome:\n{!s}'.format(winner))
 
 if __name__ == '__main__':
-    main()
+    run(config_path=cfg)    
