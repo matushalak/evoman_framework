@@ -32,6 +32,9 @@ def make_config(p_add_connection:float,
                 # copy all other lines
                 else:
                     new.write(line)
+    # which config to load
+    print(file_name)
+    return file_name
 
 if __name__ == '__main__':
     # test case
