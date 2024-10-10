@@ -15,6 +15,16 @@ import argparse
 import pickle as pkl
 import optuna
 
+########
+# NOTE: change the ranges of the hyperparameter search space below in the function 'objective' 
+########
+
+
+# --------------------------------------------------------NOTE, BELOW THIS: NEAT ALGORTIHM 
+# - difference to EA2_neat: moved env = Environment to run() function
+#                           made run() return the final best fitness
+#                           added num_reps and num_trials in parser and global environment
+
 def parse_args():
     '''' Function enabling command-line arguments'''
     # Initialize the argument parser
@@ -26,7 +36,7 @@ def parse_args():
     parser.add_argument('-nmes', '--enemies', nargs = '+', type = int, required=True, default = False, help='Provide list of enemies to train against')
     parser.add_argument('-mult', '--multi', type=str, required=False, default = 'yes', help="Single or Multienemy")
     parser.add_argument('-trials', '--num_trials', type=int, required=False, default=100, help='Number of bayesian optimization trials') 
-
+    parser.add_argument('-reps', '--num_reps', type=int, required=False, default=3, help='Number of NEAT repititions with the same set of params') 
 
     return parser.parse_args()
 
@@ -35,6 +45,8 @@ global env, cfg, name, enemies, multi, maxgen
 cfg = 'neat_config.txt'
 maxgen = args.maxgen
 enemies = args.enemies
+num_reps = args.num_reps
+num_trials = args.num_trials
 multi  = 'yes' if args.multi == 'yes' else 'no'
 
 if isinstance(args.exp_name, str):
@@ -116,9 +128,11 @@ def run(config_path):
     return 0 #TODO RETURN FINAL VALUE FOR FITNESS!
 
 
-# -------------------------------------------------------- BAYESIAN
+# -------------------------------------------------------- NOTE, BELOW THIS: BAYESIAN OPTIMIZATION
 
 def mean_result_NEAT(config_path, num_reps):
+
+    #TODO check if this can be runned parallel... 
 
     avg_fitness = 0
     for i in range(num_reps):
@@ -170,36 +184,34 @@ def make_config(p_add_connection:float,
     return file_name
 
 
-def objective(trial, config_path, num_reps):
+def objective(trial, num_reps):
     
-    #TODO HERE DEFINE THE RANGE FOR THE HYPERPARAMS
+    # set the ranges for the parameters to optimize and build the trial
     p_add_connection = trial.suggest_float('p_add_connection', 0.4, 0.6)  
     p_remove_connection = trial.suggest_float('p_remove_connection', 0.4, 0.6)  
     p_add_node = trial.suggest_float('p_add_node', 0.1, 0.3)  
     p_remove_node = trial.suggest_float('p_remove_node', 0.1, 0.3)  
     N_starting_hidden_neurons = trial.suggest_int('N_starting_hidden_neurons', 8, 12)  
 
-    #TODO HERE SAVE THE NEW HYPERPARAMS IN CONFIG FILE
+    # make a config file with the new chosen parameters
     config_path = make_config(p_add_connection, 
                     p_remove_connection, 
                     p_add_node,
                     p_remove_node,
                     N_starting_hidden_neurons)
 
-    # PASS THE CONFIG FILE TO MEAN RESULTS
+    # pass the config file to mean results which runs the NEAT
     performance = mean_result_NEAT(config_path, num_reps)
     
     return performance 
 
 
-def bayesian_optimization(num_trials, config_path=cfg):
-
-    num_reps = 3 #TODO MAKE PARSER ARGUEMENT
+def bayesian_optimization(num_trials, num_reps):
     
     study = optuna.create_study(direction='maximize',
                                         storage="sqlite:///db.sqlite3",  # Specify the storage URL here.
-                                        study_name="08_10_nightrun")  #TODO change study name
-    study.optimize(lambda trial: objective(trial, config_path, num_reps), n_trials=num_trials)
+                                        study_name=name)  #TODO see if such study name makes sence
+    study.optimize(lambda trial: objective(trial, num_reps), n_trials=num_trials)
 
     # Print best hyperparameters
     print("Best hyperparameters: ", study.best_params)
@@ -208,5 +220,4 @@ def bayesian_optimization(num_trials, config_path=cfg):
 if __name__ == '__main__':
     num_trials = args.num_trials
     #TODO: BIG QUESTION: HOW DO WE UPDATE ENV?
-    bayesian_optimization(num_trials) 
-    run(config_path=cfg)    
+    bayesian_optimization(num_trials, num_reps) 
