@@ -8,7 +8,7 @@ import os
 import neat
 from evoman.environment import Environment
 from demo_controller import player_controller
-from neat_controller import neat_controller
+from bayesian_neat_controller import bayesian_neat_controller
 from time import time
 from pandas import DataFrame
 import argparse
@@ -79,6 +79,22 @@ def eval_genome(genome, config):
     '''
     Parallelized version
     '''
+
+    #TODO PUT ENV HERE
+    #TODO CHANGE CONTROLLER 
+    #TODO UPDATE THE SQL
+    #TODO CHECK IF AVG PARALLEL 
+
+    env = Environment(experiment_name=name,
+                enemies=enemies,
+                multiplemode=multi, 
+                playermode="ai",
+                player_controller=bayesian_neat_controller(config), # you  can insert your own controller here
+                enemymode="static",
+                level=2,
+                speed="fastest",
+                visuals=False)
+    
     
     net = neat.nn.FeedForwardNetwork.create(genome, config)
     fitness ,p,e,t = env.play(pcont=net)
@@ -98,20 +114,6 @@ def save_stats(StatsReporter):
 #     print(env)
 
 def run(config_path):
-
-    global env
-
-    #TODO ENV HERE? 
-
-    env = Environment(experiment_name=name,
-                enemies=enemies,
-                multiplemode=multi, 
-                playermode="ai",
-                player_controller=neat_controller(config_path=config_path), # you  can insert your own controller here
-                enemymode="static",
-                level=2,
-                speed="fastest",
-                visuals=False)
 
     start = time()
 
