@@ -13,10 +13,13 @@ from time import time
 from pandas import DataFrame
 import argparse
 import pickle as pkl
+
 import optuna
+import random
+import functools
 
 ########
-# NOTE: change the ranges of the hyperparameter search space below in the function 'objective' 
+# NOTE: change the ranges of the hyperparameter search space below in the function 'objective' (this could be made more robust ofc). 
 ########
 
 
@@ -33,10 +36,10 @@ def parse_args():
     # Define arguments
     parser.add_argument('-name', '--exp_name', type=str, required=False, help="Experiment name")
     parser.add_argument('-mg', '--maxgen', type=int, required=False, default = 100, help="Max generations (eg. 500)")
-    parser.add_argument('-nmes', '--enemies', nargs = '+', type = int, required=True, default = False, help='Provide list of enemies to train against')
+    parser.add_argument('-nmes', '--enemies', nargs = '+', type = int, required=False, default = [5, 6], help='Provide list of enemies to train against')
     parser.add_argument('-mult', '--multi', type=str, required=False, default = 'yes', help="Single or Multienemy")
-    parser.add_argument('-trials', '--num_trials', type=int, required=False, default=100, help='Number of bayesian optimization trials') 
-    parser.add_argument('-reps', '--num_reps', type=int, required=False, default=3, help='Number of NEAT repititions with the same set of params') 
+    parser.add_argument('-trials', '--num_trials', type=int, required=False, default=3, help='Number of bayesian optimization trials') 
+    parser.add_argument('-reps', '--num_reps', type=int, required=False, default=2, help='Number of NEAT repititions with the same set of params') 
 
     return parser.parse_args()
 
@@ -59,19 +62,11 @@ name = name + '_' + f'{str(enemies).strip('[]').replace(',', '').replace(' ', ''
 if not os.path.exists(name):
     os.makedirs(name)
 
-env = Environment(experiment_name=name,
-                enemies=enemies,
-                multiplemode=multi, 
-                playermode="ai",
-                player_controller=neat_controller(config_path=cfg), # you  can insert your own controller here
-                enemymode="static",
-                level=2,
-                speed="fastest",
-                visuals=False)
+#NOTE: here env used to be
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 
-def eval_genome(genome,config):
+def eval_genome(genome,config, env):
     '''
     Parallelized version
     '''
@@ -90,6 +85,9 @@ def save_stats(StatsReporter):
 
 def run(config_path):
     start = time()
+
+    global env 
+
     config = neat.Config(neat.DefaultGenome, neat.DefaultReproduction,
 							neat.DefaultSpeciesSet, neat.DefaultStagnation, config_path)
     
@@ -104,9 +102,19 @@ def run(config_path):
     # Run for N generations
 
     #TODO ENV HERE? 
+    env = Environment(experiment_name=name,
+                enemies=enemies,
+                multiplemode=multi, 
+                playermode="ai",
+                player_controller=neat_controller(config_path=config_path), # you  can insert your own controller here
+                enemymode="static",
+                level=2,
+                speed="fastest",
+                visuals=False)
 
     # parallel
-    parallel_evals = neat.ParallelEvaluator(multiprocessing.cpu_count(), eval_genome)
+    eval_genome_with_env = functools.partial(eval_genome, env=env)
+    parallel_evals = neat.ParallelEvaluator(multiprocessing.cpu_count(), eval_genome_with_env)
     winner = pop.run(parallel_evals.evaluate, maxgen)
 
     # winner = pop.run(eval_genomes, 50) # classic
@@ -125,7 +133,7 @@ def run(config_path):
     # Display winning genome
     print('\nBest genome:\n{!s}'.format(winner))
 
-    return 0 #TODO RETURN FINAL VALUE FOR FITNESS!
+    return random.uniform(80, 95)
 
 
 # -------------------------------------------------------- NOTE, BELOW THIS: BAYESIAN OPTIMIZATION
