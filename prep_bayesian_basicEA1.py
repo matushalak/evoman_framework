@@ -41,8 +41,8 @@ def parse_args():
 def objective(trial, popsize, mg, n_hidden, experiment_name,
                  env, save_gens, num_reps):
     # Hyperparameter search space
-    scaling_factor = trial.suggest_float('scaling_factor', 0.1, 10.0)  # Fitness sharing scaling factor
-    mutation_rate = trial.suggest_float('mutation_rate', 0.005, 0.75)  # Mutation rate
+    scaling_factor = trial.suggest_float('scaling_factor', 0.01, 0.2)  # Fitness sharing scaling factor
+    mutation_rate = trial.suggest_float('mutation_rate', 0.01, 0.75)  # Mutation rate
     sigma_prime = trial.suggest_float('sigma_prime', 0.01, 1.0)  # Mutation sigma
     crossover_rate = trial.suggest_float('crossover_rate', 0.05, 0.75)  # Crossover rate
     alpha = trial.suggest_float('alpha', 0.1, 2.0)  # Recombination factor

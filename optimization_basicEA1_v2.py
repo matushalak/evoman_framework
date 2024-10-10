@@ -193,6 +193,7 @@ def vectorized_fitness_sharing(fitnesses: np.ndarray, population: np.ndarray,
     # Calculate pairwise Euclidean distances for the entire population
     diff_matrix = population[:, np.newaxis] - population[np.newaxis, :]
     distances = np.linalg.norm(diff_matrix, axis=2)  # Shape: (pop_size, pop_size)
+    print(f'max dist: {np.max(distances)}')
 
     # Apply the niche count function where distance < sigma_share
     niche_matrix = np.where(distances < sigma_share, 1 - (distances / sigma_share), 0)
@@ -226,12 +227,15 @@ def vectorized_tournament_selection(population, fitnesses, n_tournaments, k=15):
     """
     # Randomly select k individuals for each tournament (by default with replacement)
     players = np.random.choice(np.arange(len(population)), size=(n_tournaments, k))
+    print(f'players, {np.unique(players)}: {players}')
 
     # Find the best individual (highest fitness) in each tournament
     best_indices = np.argmax(fitnesses[players], axis=1)
+    print(f'best indices, {len(best_indices)}: {best_indices}')
 
     # Retrieve the winning individuals (parents) from the population
     selected_parents = population[players[np.arange(n_tournaments), best_indices]]
+    print(f'players: {selected_parents}')
     
     return selected_parents
 
@@ -261,9 +265,10 @@ def vectorized_ranking_selection(population, fitnesses, n_parents, beta=0.1):
     
     # Step 3: Select parents based on the computed probabilities
     selected_indices = np.random.choice(ranked_indices, size=n_parents, p=probabilities, replace=True)
-    
+    print(f'selected_indices num: {len(selected_indices)}, list:{selected_indices}')
     # Step 4: Return the selected parents
     selected_parents = population[selected_indices]
+    print(len(selected_parents))
     
     return selected_parents
 
@@ -286,8 +291,8 @@ def vectorized_parent_selection(population, fitnesses, env: Environment, n_child
     n_parents = int(len(population) / n_children) * n_children  # Ensure multiple of n_children
     
     # Perform tournament selection for all parents at once
-    #g_parents = vectorized_tournament_selection(population, fitnesses, n_parents, k)
-    g_parents = vectorized_ranking_selection(population, fitnesses, n_parents)
+    g_parents = vectorized_tournament_selection(population, fitnesses, n_parents, k)
+    #g_parents = vectorized_ranking_selection(population, fitnesses, n_parents)
     
     # Vectorized fitness evaluation of selected parents
     f_parents = evaluate_fitnesses(env, g_parents)

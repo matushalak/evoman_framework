@@ -1,4 +1,0 @@
-
-
-gen best mean std gain diversity
-0 84.346214 -3.30269 8.764242 5.2 0.574477
