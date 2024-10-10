@@ -62,7 +62,7 @@ db_name = args.db_name #NOTE: option 3: change the database name to get a comple
 multi  = 'yes' if args.multi == 'yes' else 'no'
 
 # add enemy names
-name = name + '_' + f'EN{str(enemies).strip('[]').replace(',', '').replace(' ', '')}' + f'reps{num_reps}' + f'mg{maxgen}'
+name = name + '_' + f'EN{str(enemies).strip('[]').replace(',', '').replace(' ', '')}' + '_' + f'reps{num_reps}' + '_' + f'mg{maxgen}'
 if not os.path.exists(name):
     os.makedirs(name)
 
