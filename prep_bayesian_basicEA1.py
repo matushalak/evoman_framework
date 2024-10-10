@@ -47,7 +47,7 @@ def objective(trial, popsize, mg, n_hidden, experiment_name,
     crossover_rate = trial.suggest_float('crossover_rate', 0.05, 0.75)  # Crossover rate
     alpha = trial.suggest_float('alpha', 0.1, 2.0)  # Recombination factor
     tournament_size = trial.suggest_int('tournament_size', 2, 10)  # Tournament selection size
-    elite_fraction = trial.suggest_float('elite_fraction', 0.3, 0.9)  # Elite fraction in survivor selection
+    elite_fraction = trial.suggest_float('elite_fraction', 0.1, 0.9)  # Elite fraction in survivor selection
 
     hyperparameters = (scaling_factor, sigma_prime, alpha, tournament_size, elite_fraction, mutation_rate, crossover_rate,
                        popsize, mg)
@@ -124,7 +124,7 @@ def main():
 
     study = optuna.create_study(direction='maximize',
                                         storage="sqlite:///db.sqlite3",  # Specify the storage URL here.
-                                        study_name="quadratic-simple")  # If you want to maximize the fitness score
+                                        study_name="08_10_nightrun")  # If you want to maximize the fitness score
     study.optimize(lambda trial: objective(trial, popsize, mg, n_hidden, experiment_name,
                      env, save_gens, num_reps), n_trials=num_trials)
 
@@ -561,6 +561,9 @@ def basic_ea (hyperparameters:tuple, n_hidden_neurons:int,
     file.close()
 
     env.state_to_log() # checks environment state
+
+    return all_time[-1]
+
 
 if __name__ == '__main__':
     main()

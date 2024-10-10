@@ -1,6 +1,6 @@
 ###############################################################################
-# Author: Matus Halak       			                                      #
-# matus.halak@gmail.com     				                                  #
+# Authors: Matus Halak, Rick Geling, Rens Koppelman, Isis van Loenen
+# matus.halak@gmail.com, rickgeling@gmail.com   
 ###############################################################################
 
 # imports framework
@@ -16,7 +16,6 @@ import os
 import argparse
 from joblib import Parallel, delayed
 from pandas import read_csv
-import optuna
 
 def parse_args():
     '''' Function enabling command-line arguments'''
@@ -25,50 +24,17 @@ def parse_args():
 
     # Define arguments
     parser.add_argument('-name', '--exp_name', type=str, required=False, help="Experiment name")
-    parser.add_argument('-pop', '--popsize', type=int, required=False, default = 100, help="Population size (eg. 100)")
-    parser.add_argument('-mg', '--maxgen', type=int, required=False, default = 50, help="Max generations (eg. 500)")
-    #parser.add_argument('-cr', '--crossover_rate', type=float, required=False, default = 0.5, help="Crossover rate (e.g., 0.8)")
-    #parser.add_argument('-mr', '--mutation_rate', type=float, required=False, default = 0.1, help="Mutation rate (e.g., 0.05)")
+    parser.add_argument('-pop', '--popsize', type=int, required=False, default = 150, help="Population size (eg. 100)")
+    parser.add_argument('-mg', '--maxgen', type=int, required=False, default = 100, help="Max generations (eg. 500)")
+    parser.add_argument('-cr', '--crossover_rate', type=float, required=False, default = 0.85, help="Crossover rate (e.g., 0.8)")
+    parser.add_argument('-mr', '--mutation_rate', type=float, required=False, default = 0.25, help="Mutation rate (e.g., 0.05)")
     parser.add_argument('-nh', '--nhidden', type=int, required=False, default = 10, help="Number of Hidden Neurons (eg. 10)")
     parser.add_argument('-tst', '--test', type=bool, required=False, default = False, help="Train or Test (default = Train)")
-    parser.add_argument('-nme', '--enemy', type=int, required=False, default = 6, help="Select Enemy")
+    parser.add_argument('-nmes', '--enemies', nargs = '+', type = int, required=False, default = [5,6], help='Provide list of enemies to train against')
+    parser.add_argument('-mult', '--multi', type=str, required=False, default = 'yes', help="Single or Multienemy")
+    parser.add_argument('-fit', '--fitness_func', type=str, required=False, default='old', help = 'Which Fitness function to use? [old / new]')
 
     return parser.parse_args()
-
-def objective(trial, popsize, mg, n_hidden, experiment_name,
-                 env, new_evolution, save_gens, num_reps):
-    # Hyperparameter search space
-    scaling_factor = trial.suggest_float('scaling_factor', 0.1, 10.0)  # Fitness sharing scaling factor
-    mutation_rate = trial.suggest_float('mutation_rate', 0.005, 0.25)  # Mutation rate
-    sigma_prime = trial.suggest_float('sigma_prime', 0.01, 1.0)  # Mutation sigma
-    crossover_rate = trial.suggest_float('crossover_rate', 0.25, 0.75)  # Crossover rate
-    alpha = trial.suggest_float('alpha', 0.1, 2.0)  # Recombination factor
-    tournament_size = trial.suggest_int('tournament_size', 2, 10)  # Tournament selection size
-    elite_fraction = trial.suggest_float('elite_fraction', 0.3, 0.9)  # Elite fraction in survivor selection
-
-    hyperparameters = (scaling_factor, sigma_prime, alpha, tournament_size, elite_fraction, mutation_rate, crossover_rate)
-
-    # Replace with your actual evolutionary algorithm call
-    # Pass the hyperparameters as arguments
-    performance = mean_result_EA1(hyperparameters, popsize, mg, n_hidden, experiment_name,
-                                    env, new_evolution, save_gens, num_reps)
-    
-    return performance 
-
-
-def mean_result_EA1(hyperparameters, popsize, mg, n_hidden, experiment_name,
-                                    env, new_evolution, save_gens, num_reps):
-
-    avg_fitness = 0
-    for _ in range(num_reps):
-        fitness = basic_ea(hyperparameters, popsize, mg, n_hidden, experiment_name,
-                    env, new_evolution, save_gens)
-        avg_fitness += fitness
-
-    avg_fitness = avg_fitness/num_reps
-
-    return avg_fitness
-
 
 def main():
     '''Main function for basic EA, runs the EA which saves results'''
@@ -76,14 +42,15 @@ def main():
     args = parse_args()
     popsize = args.popsize
     mg = args.maxgen
-    #cr = args.crossover_rate
-    #mr = args.mutation_rate
+    cr = args.crossover_rate
+    mr = args.mutation_rate
     n_hidden = args.nhidden
-    enemy = args.enemy
-
-    save_gens = True
-    num_reps = 3
-    new_evolution = True
+    enemies = args.enemies
+    global multi, fitfunc  
+    multi  = 'yes' if args.multi == 'yes' else 'no'
+    fitfunc = args.fitness_func
+    if fitfunc == 'new':
+        print('Using new fitness function')
 
     if isinstance(args.exp_name, str):
         experiment_name = 'basic_' + args.exp_name
@@ -91,7 +58,7 @@ def main():
         experiment_name = 'basic_' + input("Enter Experiment (directory) Name:")
     
     # add enemy name
-    experiment_name = experiment_name + f'_{enemy}'
+    experiment_name = experiment_name + '_' + f'{str(enemies).strip('[]').replace(',', '').replace(' ', '')}'
     # directory to save experimental results
     if not os.path.exists(experiment_name):
         os.makedirs(experiment_name)
@@ -103,7 +70,8 @@ def main():
 
     # initializes simulation in individual evolution mode, for single static enemy.
     env = Environment(experiment_name=experiment_name,
-                    enemies=[enemy],
+                    enemies=enemies,
+                    multiplemode=multi, 
                     playermode="ai",
                     player_controller=player_controller(n_hidden), # you  can insert your own controller here
                     enemymode="static",
@@ -114,21 +82,26 @@ def main():
     # default environment fitness is assumed for experiment
     env.state_to_log() # checks environment state
 
-    study = optuna.create_study(direction='maximize')  # If you want to maximize the fitness score
-    study.optimize(lambda trial: objective(trial, popsize, mg, n_hidden, experiment_name,
-                     env, new_evolution, save_gens, num_reps), n_trials=50)
+    if args.test == True:
+        best_solution = np.loadtxt(experiment_name+'/best.txt')
+        print( '\n RUNNING SAVED BEST SOLUTION \n')
+        env.update_parameter('speed','normal')
+        vfitness, vplayerlife, venemylife, vtime = run_game(env, best_solution, test = True)
+        print('vfitness, vplayerlife, venemylife, vtime:\n',
+              vfitness, vplayerlife, venemylife, vtime)
+        sys.exit(0)
 
-    # Print best hyperparameters
-    print("Best hyperparameters: ", study.best_params)
-
-
-
+    if not os.path.exists(experiment_name+'/evoman_solstate'):
+        print( '\nNEW EVOLUTION\n')
+        # with initialization
+        basic_ea(popsize, mg, mr, cr, n_hidden, experiment_name,
+                 env)
+    else:
+        basic_ea(popsize, mg, mr, cr, n_hidden, experiment_name,
+                 env)
 
 # for parallelization later
 # worker_env = None
-
-
-
 
 # # runs game (evaluate fitness for 1 individual)
 def run_game(env:Environment,individual, test=False):
@@ -138,7 +111,10 @@ def run_game(env:Environment,individual, test=False):
         breakpoint()
     fitness ,p,e,t = env.play(pcont=individual)
     if test == False:
-        return fitness
+        if fitfunc == 'new':
+            return (p-(2*e)) - 0.01*t
+        else: 
+            return fitness
     else:
         return fitness ,p,e,t
 
@@ -160,6 +136,7 @@ def run_game_in_worker(name, contr, enemies, ind):
     # if worker_env is None:
     worker_env = Environment(experiment_name=name,
                             enemies=enemies,
+                            multiplemode=multi,
                             playermode="ai",
                             player_controller=contr, # you  can insert your own controller here
                             enemymode="static",
@@ -176,9 +153,22 @@ def initialize_population(popsize, individual_dims, gene_limits:list[float, floa
     population = np.random.uniform(*gene_limits, (popsize, individual_dims))
     return population
 
+
+from scipy.stats import qmc
+def initialize_population_v2(popsize, individual_dims, gene_limits:list[float, float]):
+    # Create a Latin Hypercube sampler
+    sampler = qmc.LatinHypercube(d=individual_dims)
+
+    # Generate a sample
+    lhs_sample = sampler.random(n=popsize)
+
+    # Scale the sample to the range [-1, 1]
+    population = qmc.scale(lhs_sample, l_bounds=gene_limits[0], u_bounds=gene_limits[1])
+    return population 
+
 # promoting diversity
 def vectorized_fitness_sharing(fitnesses: np.ndarray, population: np.ndarray, 
-                               gene_limits: tuple[float, float], k=0.15) -> np.ndarray:
+                               gene_limits: tuple[float, float], k=0.05) -> np.ndarray:
     """
     Apply fitness sharing as described in the slide to promote diversity and niche creation.
     [vectorized for efficiency]
@@ -245,8 +235,40 @@ def vectorized_tournament_selection(population, fitnesses, n_tournaments, k=15):
     
     return selected_parents
 
+
+def vectorized_ranking_selection(population, fitnesses, n_parents, beta=0.1):
+    """
+    Selects parents using Exponential Rank-Based Selection.
+    
+    Parameters:
+    - population: Array of individuals (each row is an individual).
+    - fitnesses: Array of fitness values for the population (same length as population).
+    - n_parents: Number of parents to select.
+    - beta: Controls the steepness of the exponential ranking (default=0.5).
+    
+    Returns:
+    - selected_parents: Array of selected parent individuals from the population.
+    """
+    # Step 1: Rank individuals based on fitness (highest fitness gets rank 0)
+    ranked_indices = np.argsort(fitnesses)[::-1]  # Indices sorted by fitness in descending order
+    
+    # Step 2: Assign exponential selection probabilities based on ranks
+    ranks = np.arange(len(fitnesses))  # Rank values from 0 to population_size - 1
+    probabilities = (1 - np.exp(-beta)) * np.exp(-beta * ranks)
+    
+    # Normalize probabilities to sum to 1
+    probabilities /= np.sum(probabilities)
+    
+    # Step 3: Select parents based on the computed probabilities
+    selected_indices = np.random.choice(ranked_indices, size=n_parents, p=probabilities, replace=True)
+    
+    # Step 4: Return the selected parents
+    selected_parents = population[selected_indices]
+    
+    return selected_parents
+
 # Parent selection
-def vectorized_parent_selection(population, fitnesses, env: Environment, k=15, n_children=2):
+def vectorized_parent_selection(population, fitnesses, env: Environment, n_children=2, k=15):
     """
     Vectorized parent selection using tournament-based selection.
     
@@ -264,7 +286,8 @@ def vectorized_parent_selection(population, fitnesses, env: Environment, k=15, n
     n_parents = int(len(population) / n_children) * n_children  # Ensure multiple of n_children
     
     # Perform tournament selection for all parents at once
-    g_parents = vectorized_tournament_selection(population, fitnesses, n_parents, k)
+    #g_parents = vectorized_tournament_selection(population, fitnesses, n_parents, k)
+    g_parents = vectorized_ranking_selection(population, fitnesses, n_parents)
     
     # Vectorized fitness evaluation of selected parents
     f_parents = evaluate_fitnesses(env, g_parents)
@@ -334,7 +357,7 @@ def vectorized_blend_recombination(p1: np.ndarray, p2: np.ndarray, alpha: float 
     return ch1, ch2
 
 
-def vectorized_crossover(all_parents: np.ndarray, p_crossover: float, alpha:float, recombination_operator: callable) -> np.ndarray:
+def vectorized_crossover(all_parents: np.ndarray, p_crossover: float, recombination_operator: callable) -> np.ndarray:
     """
     Perform fully vectorized recombination to produce all offspring.
     """
@@ -350,7 +373,7 @@ def vectorized_crossover(all_parents: np.ndarray, p_crossover: float, alpha:floa
     crossover_mask = np.random.uniform(0, 1, size=half_pop_size) < p_crossover
 
     # Perform recombination on selected pairs
-    ch1, ch2 = recombination_operator(parent1, parent2, alpha)
+    ch1, ch2 = recombination_operator(parent1, parent2)
 
     # Create offspring array by filling in the crossover children and copying the parents when no crossover
     offspring = np.empty_like(all_parents)
@@ -386,14 +409,26 @@ def vectorized_uncorrelated_mut_one_sigma(individual: np.ndarray, sigma: float, 
 
     return mutated_individual, sigma_prime
 
-def basic_ea (hyperparameters:tuple, popsize:int, max_gen:int, n_hidden_neurons:int,
-              experiment_name:str, env:Environment, new_evolution:bool = True, save_gens:bool = True):
+def gain_diversity(env, best_sol, population_genes):
+    '''
+    Obtains gain for best solution in a generation and population diversity of a given generation (average genewise STD)
+    '''
+    # Gain
+    _, pl, el, _ = run_game(env,best_sol, test=True)
+    gain = pl - el
+
+    # Diversity: rows = individuals, columns = genes
+    genewise_stds = np.std(population_genes, axis = 0) # per gene, across individuals
+    diversity = np.mean(genewise_stds)
+
+    return gain, diversity
+
+
+def basic_ea (popsize:int, max_gen:int, mr:float, cr:float, n_hidden_neurons:int,
+              experiment_name:str, env:Environment, new_evolution:bool = True):
     ''' 
     Basic evolutionary algorithm to optimize the weights 
     '''
-
-    scaling_factor, sigma_prime, alpha, tournament_size, elite_fraction, mr, cr = hyperparameters   
-
     # number of weights for multilayer with 10 hidden neurons
     individual_dims = (env.get_num_sensors()+1)*n_hidden_neurons + (n_hidden_neurons+1)*5
     # initiation time
@@ -405,7 +440,7 @@ def basic_ea (hyperparameters:tuple, popsize:int, max_gen:int, n_hidden_neurons:
         ini_g = 0
         gene_limits = [-1.0, 1.0]
         # starting step size 0.5?
-        #sigma_prime = 0.05     --> NOW USE AS HYPERPARAMETER FOR OPTIMIZATION
+        sigma_prime = 0.05
         population = initialize_population(popsize, individual_dims, gene_limits)  
         fitnesses = evaluate_fitnesses(env, population)
         solutions = [population, fitnesses]
@@ -422,32 +457,32 @@ def basic_ea (hyperparameters:tuple, popsize:int, max_gen:int, n_hidden_neurons:
 
         all_time = best_individual, best_fitness
 
-        # stagnation prevention
-        stagnation = 0
+        # for self-adaptivity
         starting_mutation_rate, starting_crossover_rate = mr, cr
+        elite_fraction, starting_elite_fraction = 0.8, 0.8
 
+        gain, diversity = gain_diversity(env, best_individual, population)
         # saves results for first pop
-        if save_gens == True:
-            file_aux  = open(experiment_name+'/results.txt','a')
-            file_aux.write('\n\ngen best mean std sigma_prime mutation_r crossover_r')
-            print( '\n GENERATION '+str(ini_g)+' '+str(round(best_fitness,6))+' '+str(round(mean_fitness,6))+' '+str(round(std_fitness,6))+' '
-                +str(round(sigma_prime, 6))+' '+str(round(mr, 6))+' '+str(round(cr, 6)))
-            file_aux.write('\n'+str(ini_g)+' '+str(round(best_fitness,6))+' '+str(round(mean_fitness,6))+' '+str(round(std_fitness,6))+' '+str(round(sigma_prime, 6))+' '+str(round(mr, 6))+' '+str(round(cr, 6)))
-            file_aux.close()
+        file_aux  = open(experiment_name+'/results.txt','a')
+        file_aux.write('\n\ngen best mean std gain diversity')
+        print( '\n GENERATION '+str(ini_g)+' '+str(round(best_fitness,6))+' '+str(round(mean_fitness,6))+' '+str(round(std_fitness,6))+' '
+              +str(round(gain, 6))+' '+str(round(diversity, 6)))
+        file_aux.write('\n'+str(ini_g)+' '+str(round(best_fitness,6))+' '+str(round(mean_fitness,6))+' '+str(round(std_fitness,6))+' '+str(round(gain, 6))+' '+str(round(diversity, 6)))
+        file_aux.close()
 
     # evolution loop
     for i in range(max_gen):
         # niching (fitness sharing)
-        shared_fitnesses = vectorized_fitness_sharing(fitnesses, population, gene_limits, scaling_factor)
-        # shared_fitnesses = fitnesses # disables fitness sharing
+        shared_fitnesses = vectorized_fitness_sharing(fitnesses, population, gene_limits)
+        #shared_fitnesses = fitnesses # disables fitness sharing
         # ?? crowding ??
         # ?? speciation - islands ??
 
         # Parent selection: (Tournament? - just first try) Probability based - YES
-        parents, parent_fitnesses = vectorized_parent_selection(population, shared_fitnesses, env, tournament_size)
+        parents, parent_fitnesses = vectorized_parent_selection(population, shared_fitnesses, env)
 
         # crossover / recombination: Whole Arithmetic (basic) | Blend Recombination (best)
-        offspring = vectorized_crossover(parents, cr, alpha, vectorized_blend_recombination)
+        offspring = vectorized_crossover(parents, cr, vectorized_blend_recombination)
         # offspring_fitnesses = evaluate_fitnesses(env, offspring)
         
         # mutation: Uncorrelated mutation with N step sizes
@@ -460,65 +495,67 @@ def basic_ea (hyperparameters:tuple, popsize:int, max_gen:int, n_hidden_neurons:
 
         # Survivor selection with elitism & some randomness
         population, fitnesses = survivor_selection(parents, parent_fitnesses, 
-                                                   list(offspring_mutated), offspring_fitnesses, elite_fraction)
+                                                   list(offspring_mutated), offspring_fitnesses,elite_fraction)
 
         # Check for best solution
         best_idx = np.argmax(fitnesses)
         generational_fitness = fitnesses[best_idx]
         gen_mean = np.mean(fitnesses)
         gen_std = np.std(fitnesses)
-        
+
         best_fitness = fitnesses[best_idx]
         best_individual = population[best_idx]
 
+        # stats
+        mean_fitness = np.mean(fitnesses)
+        std_fitness = np.std(fitnesses)
+
+        # update gain & diversity
+        gain, diversity = gain_diversity(env, best_individual, population)        
+    
         if best_fitness > all_time[-1]:
             all_time = (best_individual, best_fitness)
 
         # OUTPUT: weights + biases vector
         # saves results
-        if save_gens == True:
-            file_aux  = open(experiment_name+'/results.txt','a')
-            # file_aux.write('\n\ngen best mean std sigma_prime mutation_r crossover_r')
-            file_aux.write('\n'+str(i)+' '+str(round(generational_fitness,6))+' '+str(round(gen_mean,6))+' '+str(round(gen_std,6))+' '+str(round(sigma_prime, 6))+' '+str(round(mr, 6))+' '+str(round(cr, 6)))
-            file_aux.close()
-
-            # saves generation number
-            file_aux  = open(experiment_name+'/gen.txt','a')
-            file_aux.write(str(i))
-            file_aux.close()
-
-            # saves file with the best solution
-            np.savetxt(experiment_name+'/best.txt',best_individual)
-            np.savetxt(experiment_name+'/alltime.txt',all_time[0])
-
-            if not os.path.exists('basic_solutions'):
-                os.makedirs('basic_solutions')
-            np.savetxt(f'basic_solutions/{env.enemyn}best.txt', best_individual)
-
+        file_aux  = open(experiment_name+'/results.txt','a')
+        # file_aux.write('\n\ngen best mean std sigma_prime mutation_r crossover_r')
         print( '\n GENERATION '+str(i)+' '+str(round(generational_fitness,6))+' '+str(round(gen_mean,6))+' '+str(round(gen_std,6))+' '
-              +str(round(sigma_prime, 6))+' '+str(round(mr, 6))+' '+str(round(cr, 6)))
+              +str(round(gain, 6))+' '+str(round(diversity, 6)))
+        file_aux.write('\n'+str(i)+' '+str(round(generational_fitness,6))+' '+str(round(gen_mean,6))+' '+str(round(gen_std,6))+' '+str(round(gain, 6))+' '+str(round(diversity, 6)))
+        file_aux.close()
+
+        # saves generation number
+        file_aux  = open(experiment_name+'/gen.txt','a')
+        file_aux.write(str(i))
+        file_aux.close()
+
+        # saves file with the best solution
+        np.savetxt(experiment_name+'/best.txt',best_individual)
+        np.savetxt(experiment_name+'/alltime.txt',all_time[0])
+
+        if not os.path.exists('basic_solutions'):
+            os.makedirs('basic_solutions')
+        np.savetxt(f'basic_solutions/{env.enemyn}best.txt', best_individual)
 
         # saves simulation state
         solutions = [population, fitnesses]
         env.update_solutions(solutions)
         env.save_state()
-        
-    if save_gens == True:
-        np.savetxt(experiment_name+'/alltime.txt',all_time[0])
-        np.savetxt(f'basic_solutions/{env.enemyn}alltime.txt', all_time[0])
 
-        file = open(experiment_name+'/neuroended', 'w')  # saves control (simulation has ended) file for bash loop file
-        file.close()
-
+    np.savetxt(experiment_name+'/alltime.txt',all_time[0])
+    np.savetxt(f'basic_solutions/{env.enemyn}alltime.txt', all_time[0])
     fim = time.time() # prints total execution time for experiment
     print( '\nExecution time: '+str(round((fim-ini)/60))+' minutes \n')
     print( '\nExecution time: '+str(round((fim-ini)))+' seconds \n')
 
+
+    file = open(experiment_name+'/neuroended', 'w')  # saves control (simulation has ended) file for bash loop file
+    file.close()
+
     env.state_to_log() # checks environment state
 
-    return all_time[-1]
-
-
+    print(f'All best fitness {all_time[-1]}')
 
 if __name__ == '__main__':
     main()
