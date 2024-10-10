@@ -110,55 +110,96 @@ def run(config_path):
     # Display winning genome
     print('\nBest genome:\n{!s}'.format(winner))
 
-    return 0 #RETURN FINAL VALUE FOR FITNESS!
+    return 0 #TODO RETURN FINAL VALUE FOR FITNESS!
 
 
 # -------------------------------------------------------- BAYESIAN
 
-def objective(trial, popsize, mg, n_hidden, experiment_name,
-                 env, save_gens, num_reps):
-    # Hyperparameter search space
-    scaling_factor = trial.suggest_float('scaling_factor', 0.01, 0.2)  # Fitness sharing scaling factor
-    mutation_rate = trial.suggest_float('mutation_rate', 0.01, 0.75)  # Mutation rate
-    sigma_prime = trial.suggest_float('sigma_prime', 0.01, 1.0)  # Mutation sigma
-    crossover_rate = trial.suggest_float('crossover_rate', 0.05, 0.75)  # Crossover rate
-    alpha = trial.suggest_float('alpha', 0.1, 2.0)  # Recombination factor
-    tournament_size = trial.suggest_int('tournament_size', 2, 10)  # Tournament selection size
-    elite_fraction = trial.suggest_float('elite_fraction', 0.1, 0.9)  # Elite fraction in survivor selection
-
-    hyperparameters = (scaling_factor, sigma_prime, alpha, tournament_size, elite_fraction, mutation_rate, crossover_rate,
-                       popsize, mg)
-
-    # Pass the hyperparameters as arguments
-    performance = mean_result_EA1(hyperparameters, n_hidden, experiment_name,
-                                    env, save_gens, num_reps)
-    
-    return performance 
-
-def mean_result_EA1(hyperparameters, n_hidden, experiment_name,
-                                    env, save_gens, num_reps):
+def mean_result_NEAT(config_path, num_reps):
 
     avg_fitness = 0
     for i in range(num_reps):
         print(f'Starting repetition number: {i}')
-        fitness = basic_ea(hyperparameters, n_hidden, experiment_name,
-                    env, save_gens)
+        fitness = run(config_path)   
         avg_fitness += fitness
 
     avg_fitness = avg_fitness/num_reps
 
     return avg_fitness
 
+
+def make_config(p_add_connection:float, 
+                p_remove_connection:float, 
+                p_add_node:float,
+                p_remove_node:float,
+                N_starting_hidden_neurons:int):
+
+    os.makedirs("configs", exist_ok=True)
+    # how many config files do we have already
+    n_configs = sum([1 if 'neat_config' in f else 0 for f in os.listdir('configs')])    
+    
+    # this will be the Nth config file
+    file_name = f'configs/neat_config{n_configs+1}.txt'
+
+    keywords = {'conn_add_prob':p_add_connection,
+                'conn_delete_prob':p_remove_connection,
+                'node_add_prob':p_add_node,
+                'node_delete_prob':p_remove_node,
+                'num_hidden':N_starting_hidden_neurons}
+
+    # open default config
+    with open('neat_config.txt', 'r') as default:
+        with open(file_name, 'w') as new:
+            for line in default:
+                if any(k in line for k in keywords) == True:
+                    parameter = next(k for k in keywords if k in line)
+                    start, end = line.split('=')
+                    # update with our parameter value
+                    end = str(keywords[parameter])
+                    new_line = start + '= ' + end +'\n'
+                    new.write(new_line)
+                # copy all other lines
+                else:
+                    new.write(line)
+    # which config to load
+    print(f'config to lead: {file_name}')
+
+    return file_name
+
+
+def objective(trial, config_path, num_reps):
+    
+    #TODO HERE DEFINE THE RANGE FOR THE HYPERPARAMS
+    p_add_connection = trial.suggest_float('p_add_connection', 0.01, 0.2)  
+    p_remove_connection = trial.suggest_float('p_remove_connection', 0.01, 0.75)  
+    p_add_node = trial.suggest_float('p_add_node', 0.01, 1.0)  
+    p_remove_node = trial.suggest_float('p_remove_node', 0.05, 0.75)  
+    N_starting_hidden_neurons = trial.suggest_int('N_starting_hidden_neurons', 1, 2)  
+
+    #TODO HERE SAVE THE NEW HYPERPARAMS IN CONFIG FILE
+    config_path = make_config(p_add_connection, 
+                    p_remove_connection, 
+                    p_add_node,
+                    p_remove_node,
+                    N_starting_hidden_neurons)
+
+    # PASS THE CONFIG FILE TO MEAN RESULTS
+    performance = mean_result_NEAT(config_path, num_reps)
+    
+    return performance 
+
+
 def bayesian_optimization(num_trials, config_path=cfg):
 
-    num_reps = 3
+    num_reps = 3 #TODO MAKE PARSER ARGUEMENT
     
     study = optuna.create_study(direction='maximize',
                                         storage="sqlite:///db.sqlite3",  # Specify the storage URL here.
-                                        study_name="08_10_nightrun")  # If you want to maximize the fitness score
+                                        study_name="08_10_nightrun")  #TODO change study name
     study.optimize(lambda trial: objective(trial, config_path, num_reps), n_trials=num_trials)
 
-    return 0
+    # Print best hyperparameters
+    print("Best hyperparameters: ", study.best_params)
 
 
 if __name__ == '__main__':
