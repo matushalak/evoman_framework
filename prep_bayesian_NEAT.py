@@ -38,6 +38,21 @@ def parse_args():
 
     return parser.parse_args()
 
+def parse_args():
+    '''' Function enabling command-line arguments'''
+    # Initialize the argument parser
+    parser = argparse.ArgumentParser(description="Optimize weights of Controller NN using EA")
+
+    # Define arguments
+    parser.add_argument('-name', '--exp_name', type=str, required=False, help="Experiment name")
+    parser.add_argument('-mg', '--maxgen', type=int, required=False, default = 100, help="Max generations (eg. 500)")
+    parser.add_argument('-nmes', '--enemies', nargs = '+', type = int, required=True, default = False, help='Provide list of enemies to train against')
+    parser.add_argument('-mult', '--multi', type=str, required=False, default = 'yes', help="Single or Multienemy")
+    parser.add_argument('-trials', '--num_trials', type=int, required=False, default=100, help='Number of bayesian optimization trials') 
+
+    
+    return parser.parse_args()
+
 def objective(trial, popsize, mg, n_hidden, experiment_name,
                  env, save_gens, num_reps):
     # Hyperparameter search space
