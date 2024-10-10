@@ -13,6 +13,7 @@ from time import time
 from pandas import DataFrame
 import argparse
 import pickle as pkl
+import optuna
 
 def parse_args():
     '''' Function enabling command-line arguments'''
@@ -24,7 +25,9 @@ def parse_args():
     parser.add_argument('-mg', '--maxgen', type=int, required=False, default = 100, help="Max generations (eg. 500)")
     parser.add_argument('-nmes', '--enemies', nargs = '+', type = int, required=True, default = False, help='Provide list of enemies to train against')
     parser.add_argument('-mult', '--multi', type=str, required=False, default = 'yes', help="Single or Multienemy")
-    
+    parser.add_argument('-trials', '--num_trials', type=int, required=False, default=100, help='Number of bayesian optimization trials') 
+
+
     return parser.parse_args()
 
 args = parse_args()
@@ -107,5 +110,58 @@ def run(config_path):
     # Display winning genome
     print('\nBest genome:\n{!s}'.format(winner))
 
+    return 0 #RETURN FINAL VALUE FOR FITNESS!
+
+
+# -------------------------------------------------------- BAYESIAN
+
+def objective(trial, popsize, mg, n_hidden, experiment_name,
+                 env, save_gens, num_reps):
+    # Hyperparameter search space
+    scaling_factor = trial.suggest_float('scaling_factor', 0.01, 0.2)  # Fitness sharing scaling factor
+    mutation_rate = trial.suggest_float('mutation_rate', 0.01, 0.75)  # Mutation rate
+    sigma_prime = trial.suggest_float('sigma_prime', 0.01, 1.0)  # Mutation sigma
+    crossover_rate = trial.suggest_float('crossover_rate', 0.05, 0.75)  # Crossover rate
+    alpha = trial.suggest_float('alpha', 0.1, 2.0)  # Recombination factor
+    tournament_size = trial.suggest_int('tournament_size', 2, 10)  # Tournament selection size
+    elite_fraction = trial.suggest_float('elite_fraction', 0.1, 0.9)  # Elite fraction in survivor selection
+
+    hyperparameters = (scaling_factor, sigma_prime, alpha, tournament_size, elite_fraction, mutation_rate, crossover_rate,
+                       popsize, mg)
+
+    # Pass the hyperparameters as arguments
+    performance = mean_result_EA1(hyperparameters, n_hidden, experiment_name,
+                                    env, save_gens, num_reps)
+    
+    return performance 
+
+def mean_result_EA1(hyperparameters, n_hidden, experiment_name,
+                                    env, save_gens, num_reps):
+
+    avg_fitness = 0
+    for i in range(num_reps):
+        print(f'Starting repetition number: {i}')
+        fitness = basic_ea(hyperparameters, n_hidden, experiment_name,
+                    env, save_gens)
+        avg_fitness += fitness
+
+    avg_fitness = avg_fitness/num_reps
+
+    return avg_fitness
+
+def bayesian_optimization(num_trials, config_path=cfg):
+
+    num_reps = 3
+    
+    study = optuna.create_study(direction='maximize',
+                                        storage="sqlite:///db.sqlite3",  # Specify the storage URL here.
+                                        study_name="08_10_nightrun")  # If you want to maximize the fitness score
+    study.optimize(lambda trial: objective(trial, config_path, num_reps), n_trials=num_trials)
+
+    return 0
+
+
 if __name__ == '__main__':
+    num_trials = args.num_trials
+    bayesian_optimization(num_trials) 
     run(config_path=cfg)    

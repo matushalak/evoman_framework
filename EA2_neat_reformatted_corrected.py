@@ -44,7 +44,7 @@ def save_stats(StatsReporter):
                          'worst':StatsReporter.get_fitness_stat(min)})
     results.to_csv(name + '/results.txt')
 
-def run(config_path):
+def run(config_path, maxgen, name, enemies, multi):
     start = time()
     config = neat.Config(neat.DefaultGenome, neat.DefaultReproduction,
                          neat.DefaultSpeciesSet, neat.DefaultStagnation, config_path)
@@ -108,7 +108,7 @@ def main():
 
     os.environ["SDL_VIDEODRIVER"] = "dummy"
 
-    run(config_path=cfg)
+    run(cfg, maxgen, name, enemies, multi)
 
 if __name__ == '__main__':
     main()

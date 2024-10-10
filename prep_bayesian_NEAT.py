@@ -25,31 +25,11 @@ def parse_args():
 
     # Define arguments
     parser.add_argument('-name', '--exp_name', type=str, required=False, help="Experiment name")
-    parser.add_argument('-pop', '--popsize', type=int, required=False, default = 150, help="Population size (eg. 100)")
-    parser.add_argument('-mg', '--maxgen', type=int, required=False, default = 100, help="Max generations (eg. 500)")
-    #parser.add_argument('-cr', '--crossover_rate', type=float, required=False, default = 0.85, help="Crossover rate (e.g., 0.8)")
-    #parser.add_argument('-mr', '--mutation_rate', type=float, required=False, default = 0.25, help="Mutation rate (e.g., 0.05)")
-    parser.add_argument('-nh', '--nhidden', type=int, required=False, default = 10, help="Number of Hidden Neurons (eg. 10)")
-    #parser.add_argument('-tst', '--test', type=bool, required=False, default = False, help="Train or Test (default = Train)")
-    parser.add_argument('-nmes', '--enemies', nargs = '+', type = int, required=True, default = False, help='Provide list of enemies to train against')
-    parser.add_argument('-mult', '--multi', type=str, required=False, default = 'yes', help="Single or Multienemy")
-    parser.add_argument('-fit', '--fitness_func', type=str, required=False, default='old', help = 'Which Fitness function to use? [old / new]')
-    parser.add_argument('-trials', '--num_trials', type=int, required=False, default=100, help='Number of bayesian optimization trials') 
-
-    return parser.parse_args()
-
-def parse_args():
-    '''' Function enabling command-line arguments'''
-    # Initialize the argument parser
-    parser = argparse.ArgumentParser(description="Optimize weights of Controller NN using EA")
-
-    # Define arguments
-    parser.add_argument('-name', '--exp_name', type=str, required=False, help="Experiment name")
     parser.add_argument('-mg', '--maxgen', type=int, required=False, default = 100, help="Max generations (eg. 500)")
     parser.add_argument('-nmes', '--enemies', nargs = '+', type = int, required=True, default = False, help='Provide list of enemies to train against')
     parser.add_argument('-mult', '--multi', type=str, required=False, default = 'yes', help="Single or Multienemy")
     parser.add_argument('-trials', '--num_trials', type=int, required=False, default=100, help='Number of bayesian optimization trials') 
-
+    #ADD STORAGE SQL NAME HERE
     
     return parser.parse_args()
 
