@@ -35,7 +35,7 @@ def parse_args():
 
     # Define arguments
     parser.add_argument('-name', '--exp_name', type=str, required=False, help="Experiment name")
-    parser.add_argument('-mg', '--maxgen', type=int, required=False, default = 100, help="Max generations (eg. 500)")
+    parser.add_argument('-mg', '--maxgen', type=int, required=False, default = 10, help="Max generations (eg. 500)")
     parser.add_argument('-nmes', '--enemies', nargs = '+', type = int, required=False, default = [5, 6], help='Provide list of enemies to train against')
     parser.add_argument('-mult', '--multi', type=str, required=False, default = 'yes', help="Single or Multienemy")
     parser.add_argument('-trials', '--num_trials', type=int, required=False, default=3, help='Number of bayesian optimization trials') 
@@ -63,13 +63,23 @@ if not os.path.exists(name):
     os.makedirs(name)
 
 #NOTE: here env used to be
+# env = Environment(experiment_name=name,
+#             enemies=enemies,
+#             multiplemode=multi, 
+#             playermode="ai",
+#             player_controller=neat_controller(config_path=cfg), # you  can insert your own controller here
+#             enemymode="static",
+#             level=2,
+#             speed="fastest",
+#             visuals=False)
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 
-def eval_genome(genome,config, env):
+def eval_genome(genome, config):
     '''
     Parallelized version
     '''
+    
     net = neat.nn.FeedForwardNetwork.create(genome, config)
     fitness ,p,e,t = env.play(pcont=net)
     return fitness
@@ -83,10 +93,27 @@ def save_stats(StatsReporter):
                          'worst':StatsReporter.get_fitness_stat(min)})
     results.to_csv(name + '/results.txt')
 
-def run(config_path):
-    start = time()
+# def print_env():
+#     print(f'NEW RUN, NEW ENV')
+#     print(env)
 
-    global env 
+def run(config_path):
+
+    global env
+
+    #TODO ENV HERE? 
+
+    env = Environment(experiment_name=name,
+                enemies=enemies,
+                multiplemode=multi, 
+                playermode="ai",
+                player_controller=neat_controller(config_path=config_path), # you  can insert your own controller here
+                enemymode="static",
+                level=2,
+                speed="fastest",
+                visuals=False)
+
+    start = time()
 
     config = neat.Config(neat.DefaultGenome, neat.DefaultReproduction,
 							neat.DefaultSpeciesSet, neat.DefaultStagnation, config_path)
@@ -101,20 +128,8 @@ def run(config_path):
 
     # Run for N generations
 
-    #TODO ENV HERE? 
-    env = Environment(experiment_name=name,
-                enemies=enemies,
-                multiplemode=multi, 
-                playermode="ai",
-                player_controller=neat_controller(config_path=config_path), # you  can insert your own controller here
-                enemymode="static",
-                level=2,
-                speed="fastest",
-                visuals=False)
-
     # parallel
-    eval_genome_with_env = functools.partial(eval_genome, env=env)
-    parallel_evals = neat.ParallelEvaluator(multiprocessing.cpu_count(), eval_genome_with_env)
+    parallel_evals = neat.ParallelEvaluator(multiprocessing.cpu_count(), eval_genome)
     winner = pop.run(parallel_evals.evaluate, maxgen)
 
     # winner = pop.run(eval_genomes, 50) # classic
