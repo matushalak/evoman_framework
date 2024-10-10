@@ -90,6 +90,9 @@ def run(config_path):
     pop.add_reporter(stats)
 
     # Run for N generations
+
+    #TODO ENV HERE? 
+
     # parallel
     parallel_evals = neat.ParallelEvaluator(multiprocessing.cpu_count(), eval_genome)
     winner = pop.run(parallel_evals.evaluate, maxgen)
@@ -170,11 +173,11 @@ def make_config(p_add_connection:float,
 def objective(trial, config_path, num_reps):
     
     #TODO HERE DEFINE THE RANGE FOR THE HYPERPARAMS
-    p_add_connection = trial.suggest_float('p_add_connection', 0.01, 0.2)  
-    p_remove_connection = trial.suggest_float('p_remove_connection', 0.01, 0.75)  
-    p_add_node = trial.suggest_float('p_add_node', 0.01, 1.0)  
-    p_remove_node = trial.suggest_float('p_remove_node', 0.05, 0.75)  
-    N_starting_hidden_neurons = trial.suggest_int('N_starting_hidden_neurons', 1, 2)  
+    p_add_connection = trial.suggest_float('p_add_connection', 0.4, 0.6)  
+    p_remove_connection = trial.suggest_float('p_remove_connection', 0.4, 0.6)  
+    p_add_node = trial.suggest_float('p_add_node', 0.1, 0.3)  
+    p_remove_node = trial.suggest_float('p_remove_node', 0.1, 0.3)  
+    N_starting_hidden_neurons = trial.suggest_int('N_starting_hidden_neurons', 8, 12)  
 
     #TODO HERE SAVE THE NEW HYPERPARAMS IN CONFIG FILE
     config_path = make_config(p_add_connection, 
@@ -204,5 +207,6 @@ def bayesian_optimization(num_trials, config_path=cfg):
 
 if __name__ == '__main__':
     num_trials = args.num_trials
+    #TODO: BIG QUESTION: HOW DO WE UPDATE ENV?
     bayesian_optimization(num_trials) 
     run(config_path=cfg)    

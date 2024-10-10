@@ -17,7 +17,7 @@ def make_config(p_add_connection:float,
                 'node_add_prob':p_add_node,
                 'node_delete_prob':p_remove_node,
                 'num_hidden':N_starting_hidden_neurons}
-
+ 
     # open default config
     with open('neat_config.txt', 'r') as default:
         with open(file_name, 'w') as new:
