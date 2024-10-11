@@ -25,7 +25,7 @@ def parse_args():
     # Define arguments
     parser.add_argument('-name', '--exp_name', type=str, required=False, help="Experiment name")
     parser.add_argument('-pop', '--popsize', type=int, required=False, default = 150, help="Population size (eg. 100)")
-    parser.add_argument('-mg', '--maxgen', type=int, required=False, default = 100, help="Max generations (eg. 500)")
+    parser.add_argument('-mg', '--maxgen', type=int, required=False, default = 15, help="Max generations (eg. 500)")
     parser.add_argument('-cr', '--crossover_rate', type=float, required=False, default = 0.85, help="Crossover rate (e.g., 0.8)")
     parser.add_argument('-mr', '--mutation_rate', type=float, required=False, default = 0.25, help="Mutation rate (e.g., 0.05)")
     parser.add_argument('-nh', '--nhidden', type=int, required=False, default = 10, help="Number of Hidden Neurons (eg. 10)")
@@ -193,7 +193,6 @@ def vectorized_fitness_sharing(fitnesses: np.ndarray, population: np.ndarray,
     # Calculate pairwise Euclidean distances for the entire population
     diff_matrix = population[:, np.newaxis] - population[np.newaxis, :]
     distances = np.linalg.norm(diff_matrix, axis=2)  # Shape: (pop_size, pop_size)
-    print(f'max dist: {np.max(distances)}')
 
     # Apply the niche count function where distance < sigma_share
     niche_matrix = np.where(distances < sigma_share, 1 - (distances / sigma_share), 0)
@@ -227,15 +226,12 @@ def vectorized_tournament_selection(population, fitnesses, n_tournaments, k=15):
     """
     # Randomly select k individuals for each tournament (by default with replacement)
     players = np.random.choice(np.arange(len(population)), size=(n_tournaments, k))
-    print(f'players, {np.unique(players)}: {players}')
 
     # Find the best individual (highest fitness) in each tournament
     best_indices = np.argmax(fitnesses[players], axis=1)
-    print(f'best indices, {len(best_indices)}: {best_indices}')
 
     # Retrieve the winning individuals (parents) from the population
     selected_parents = population[players[np.arange(n_tournaments), best_indices]]
-    print(f'players: {selected_parents}')
     
     return selected_parents
 
@@ -265,10 +261,9 @@ def vectorized_ranking_selection(population, fitnesses, n_parents, beta=0.1):
     
     # Step 3: Select parents based on the computed probabilities
     selected_indices = np.random.choice(ranked_indices, size=n_parents, p=probabilities, replace=True)
-    print(f'selected_indices num: {len(selected_indices)}, list:{selected_indices}')
+
     # Step 4: Return the selected parents
     selected_parents = population[selected_indices]
-    print(len(selected_parents))
     
     return selected_parents
 
