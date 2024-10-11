@@ -4,8 +4,16 @@
 # note that the param 'controller' received by 'control' is provided through environment.play(pcont=x)
 # 'controller' could contain either weights to be used in the standard controller (or other controller implemented),
 # or even a full network structure (ex.: from NEAT).
-from evoman.controller import Controller
+import sys
+import os
 import numpy as np
+
+# Get the absolute path to the project root
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+# Add the project root to PYTHONPATH
+sys.path.append(project_root)
+
+from evoman.controller import Controller
 
 
 def sigmoid_activation(x):

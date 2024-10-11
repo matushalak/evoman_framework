@@ -5,9 +5,7 @@
 
 # imports framework
 import sys
-
-from evoman.environment import Environment
-from demo_controller import player_controller
+import os
 
 # imports other libs
 import time
@@ -17,6 +15,14 @@ import argparse
 from joblib import Parallel, delayed
 from pandas import read_csv
 from scipy.stats import qmc # only for initialize_population_v2
+
+# Get the absolute path to the project root
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+# Add the project root to PYTHONPATH
+sys.path.append(project_root)
+
+from evoman.environment import Environment
+from demo_controller_foldering import player_controller
 
 
 # # runs game (evaluate fitness for 1 individual)
