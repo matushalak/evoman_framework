@@ -27,7 +27,7 @@ def parse_args():  # Unchanged
     # Define arguments  # Unchanged
     parser.add_argument('-name', '--exp_name', type=str, required=False, help="Experiment name")  # Unchanged
     parser.add_argument('-pop', '--popsize', type=int, required=False, default=150, help="Population size (eg. 100)")  # Unchanged
-    parser.add_argument('-mg', '--maxgen', type=int, required=False, default=15, help="Max generations (eg. 500)")  # Unchanged
+    parser.add_argument('-mg', '--maxgen', type=int, required=False, default=50, help="Max generations (eg. 500)")  # Unchanged
     parser.add_argument('-cr', '--crossover_rate', type=float, required=False, default=0.85, help="Crossover rate (e.g., 0.8)")  # Unchanged
     parser.add_argument('-mr', '--mutation_rate', type=float, required=False, default=0.25, help="Mutation rate (e.g., 0.05)")  # Unchanged
     parser.add_argument('-nh', '--nhidden', type=int, required=False, default=10, help="Number of Hidden Neurons (eg. 10)")  # Unchanged

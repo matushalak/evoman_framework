@@ -25,19 +25,20 @@ def parse_args():
     # Define arguments
     parser.add_argument('-name', '--exp_name', type=str, required=False, help="Experiment name")
     parser.add_argument('-pop', '--popsize', type=int, required=False, default = 150, help="Population size (eg. 100)")
-    parser.add_argument('-mg', '--maxgen', type=int, required=False, default = 15, help="Max generations (eg. 500)")
+    parser.add_argument('-mg', '--maxgen', type=int, required=False, default = 100, help="Max generations (eg. 500)")
     parser.add_argument('-cr', '--crossover_rate', type=float, required=False, default = 0.85, help="Crossover rate (e.g., 0.8)")
     parser.add_argument('-mr', '--mutation_rate', type=float, required=False, default = 0.25, help="Mutation rate (e.g., 0.05)")
     parser.add_argument('-nh', '--nhidden', type=int, required=False, default = 10, help="Number of Hidden Neurons (eg. 10)")
     parser.add_argument('-tst', '--test', type=bool, required=False, default = False, help="Train or Test (default = Train)")
-    parser.add_argument('-nmes', '--enemies', nargs = '+', type = int, required=True, default = False, help='Provide list of enemies to train against')
-    parser.add_argument('-mult', '--multi', type=str, required=False, default = 'yes', help="Single or Multienemy")
-    parser.add_argument('-fit', '--fitness_func', type=str, required=False, default='old', help = 'Which Fitness function to use? [old / new]')
+    parser.add_argument('-enemies', '--enemies', nargs='+', type=int, default=[5, 6, 8], required=False, help="List of enemies (e.g., 2 6 8)")
+    parser.add_argument('-dir', '--directory', type=str, default='EA1_line_plot_runs', required=False, help="Directory to save runs")
+    #EA1_line_plot_runs
 
     return parser.parse_args()
 
+
 def main():
-    '''Main function for basic EA, runs the EA which saves results'''
+    '''Main function for basic EA, runs the EA for multiple enemies'''
     # command line arguments for experiment parameters
     args = parse_args()
     popsize = args.popsize
@@ -46,62 +47,44 @@ def main():
     mr = args.mutation_rate
     n_hidden = args.nhidden
     enemies = args.enemies
-    global multi, fitfunc  
-    multi  = 'yes' if args.multi == 'yes' else 'no'
-    fitfunc = args.fitness_func
-    if fitfunc == 'new':
-        print('Using new fitness function')
+    base_dir = args.directory
 
-    if isinstance(args.exp_name, str):
-        experiment_name = 'basic_' + args.exp_name
-    else:
-        experiment_name = 'basic_' + input("Enter Experiment (directory) Name:")
-    
-    # add enemy name
-    experiment_name = experiment_name + '_' + f'{str(enemies).strip('[]').replace(',', '').replace(' ', '')}'
-    # directory to save experimental results
-    if not os.path.exists(experiment_name):
-        os.makedirs(experiment_name)
-    
+    # Create the base directory if it does not exist
+    if not os.path.exists(base_dir):
+        os.makedirs(base_dir)
+
     # choose this for not using visuals and thus making experiments faster
     headless = True
     if headless:
         os.environ["SDL_VIDEODRIVER"] = "dummy"
 
-    # initializes simulation in individual evolution mode, for single static enemy.
-    env = Environment(experiment_name=experiment_name,
-                    enemies=enemies,
-                    multiplemode=multi, 
-                    playermode="ai",
-                    player_controller=player_controller(n_hidden), # you  can insert your own controller here
-                    enemymode="static",
-                    level=2,
-                    speed="fastest",
-                    visuals=False)
-    
-    # default environment fitness is assumed for experiment
-    env.state_to_log() # checks environment state
+    # Run the EA for each enemy
+    for enemy in enemies:
+        enemy_dir = os.path.join(base_dir, f'EN{enemy}')
+        if not os.path.exists(enemy_dir):
+            os.makedirs(enemy_dir)
 
-    if args.test == True:
-        best_solution = np.loadtxt(experiment_name+'/best.txt')
-        print( '\n RUNNING SAVED BEST SOLUTION \n')
-        env.update_parameter('speed','normal')
-        vfitness, vplayerlife, venemylife, vtime = run_game(env, best_solution, test = True)
-        print('vfitness, vplayerlife, venemylife, vtime:\n',
-              vfitness, vplayerlife, venemylife, vtime)
-        sys.exit(0)
+        for run in range(1, 11):  # Run the EA 10 times for each enemy
+            run_dir = os.path.join(enemy_dir, f'run_{run}_EN{enemy}')
+            if not os.path.exists(run_dir):
+                os.makedirs(run_dir)
 
-    if not os.path.exists(experiment_name+'/evoman_solstate'):
-        print( '\nNEW EVOLUTION\n')
-        # with initialization
-        basic_ea(popsize, mg, mr, cr, n_hidden, experiment_name,
-                 env)
-    else:
-        basic_ea(popsize, mg, mr, cr, n_hidden, experiment_name,
-                 env)
+            # Set up the environment
+            env = Environment(experiment_name=run_dir,
+                              enemies=[enemy],
+                              playermode="ai",
+                              player_controller=player_controller(n_hidden),
+                              enemymode="static",
+                              level=2,
+                              speed="fastest",
+                              visuals=False)
+            
+            # default environment fitness is assumed for experiment
+            env.state_to_log() # checks environment state
 
-# for parallelization later
-# worker_env = None
+            # Run the basic EA for this enemy and run number
+            print(f'\nRunning EA for enemy {enemy}, run {run}\n')
+            basic_ea(popsize, mg, mr, cr, n_hidden, run_dir, env)
 
 # # runs game (evaluate fitness for 1 individual)
 def run_game(env:Environment,individual, test=False):
@@ -111,10 +94,7 @@ def run_game(env:Environment,individual, test=False):
         breakpoint()
     fitness ,p,e,t = env.play(pcont=individual)
     if test == False:
-        if fitfunc == 'new':
-            return (p-(2*e)) - 0.01*t
-        else: 
-            return fitness
+        return fitness
     else:
         return fitness ,p,e,t
 
@@ -136,7 +116,6 @@ def run_game_in_worker(name, contr, enemies, ind):
     # if worker_env is None:
     worker_env = Environment(experiment_name=name,
                             enemies=enemies,
-                            multiplemode=multi,
                             playermode="ai",
                             player_controller=contr, # you  can insert your own controller here
                             enemymode="static",
