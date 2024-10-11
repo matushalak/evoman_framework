@@ -7,7 +7,7 @@ import multiprocessing
 import os
 import neat
 from evoman.environment import Environment
-from demo_controller import player_controller
+# from demo_controller import player_controller
 from bayesian_neat_controller import bayesian_neat_controller
 from time import time
 from pandas import DataFrame
@@ -195,11 +195,11 @@ def objective(trial, num_reps):
     
     # set the ranges for the parameters to optimize and build the trial
     #TODO: if we change the params and ranges, do we need to change the study??
-    p_add_connection = trial.suggest_float('p_add_connection', 0.4, 0.6)  
-    p_remove_connection = trial.suggest_float('p_remove_connection', 0.4, 0.6)  
-    p_add_node = trial.suggest_float('p_add_node', 0.1, 0.3)  
-    p_remove_node = trial.suggest_float('p_remove_node', 0.1, 0.3)  
-    N_starting_hidden_neurons = trial.suggest_int('N_starting_hidden_neurons', 8, 12)  
+    p_add_connection = trial.suggest_float('p_add_connection', 0.3, 0.7)  
+    p_remove_connection = trial.suggest_float('p_remove_connection', 0.3, 0.7)  
+    p_add_node = trial.suggest_float('p_add_node', 0.05, 0.35)  
+    p_remove_node = trial.suggest_float('p_remove_node', 0.05, 0.35)  
+    N_starting_hidden_neurons = trial.suggest_int('N_starting_hidden_neurons', 5, 15)  
 
     # make a config file with the new chosen parameters
     config_path = make_config(p_add_connection, 
