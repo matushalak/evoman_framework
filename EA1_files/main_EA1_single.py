@@ -17,7 +17,7 @@ from joblib import Parallel, delayed
 from pandas import read_csv
 
 # Import ClassicEA from EA1_optimizer  #CHANGED
-from EA1_optimizer import ClassicEA  #CHANGED
+from EA1_optimizer_test import ClassicEA  #CHANGED
 
 def parse_args():  # Unchanged
     '''' Function enabling command-line arguments'''  # Unchanged
@@ -53,6 +53,18 @@ def main():
     global multi, fitfunc  # Unchanged
     multi = 'yes' if args.multi == 'yes' else 'no'  # Unchanged
     fitfunc = args.fitness_func  # Unchanged
+
+    hyperparameters = {
+    "scaling_factor": 0.15,
+    "sigma_prime": 0.05,
+    "alpha": 0.5,
+    "tournament_size": 6,
+    "elite_fraction": 0.8,
+    "mutation_rate": mr,
+    "crossover_rate": cr,
+    "popsize": popsize,
+    "max_gen": mg
+    }
 
     if fitfunc == 'new':  # Unchanged
         print('Using new fitness function')  # Unchanged
@@ -100,11 +112,11 @@ def main():
     if not os.path.exists(experiment_name + '/evoman_solstate'):  # Unchanged
         print('\nNEW EVOLUTION\n')  # Unchanged
         # Create an instance of the ClassicEA class and run evolution  #CHANGED
-        ea = ClassicEA(popsize, mg, mr, cr, n_hidden, experiment_name, env)  #CHANGED
+        ea = ClassicEA(hyperparameters, n_hidden, experiment_name, env)  #CHANGED
         final_fitness = ea.run_evolution()  #CHANGED
     else:  # Unchanged
         # Continue existing evolution using ClassicEA  #CHANGED
-        ea = ClassicEA(popsize, mg, mr, cr, n_hidden, experiment_name, env)  #CHANGED
+        ea = ClassicEA(hyperparameters, n_hidden, experiment_name, env)  #CHANGED
         final_fitness = ea.run_evolution()  #CHANGED
 
 

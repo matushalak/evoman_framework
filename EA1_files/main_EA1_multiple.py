@@ -17,7 +17,7 @@ import argparse
 from joblib import Parallel, delayed
 from pandas import read_csv
 
-from EA1_optimizer import ClassicEA  # ADDED
+from EA1_optimizer_test import ClassicEA  # ADDED
 
 def parse_args():
     '''' Function enabling command-line arguments'''
@@ -35,7 +35,7 @@ def parse_args():
     parser.add_argument('-mult', '--multi', type=str, required=False, default='yes', help="Single or Multienemy")  # Unchanged
     parser.add_argument('-fit', '--fitness_func', type=str, required=False, default='old', help='Which Fitness function to use? [old / new]')  # Unchanged
     parser.add_argument('-nmes', '--enemies', nargs='+', type=int, required=False, default=[[5, 6], [2,3]], help='Provide list(s) of enemies to train against')  # Unchanged
-    parser.add_argument('-dir', '--directory', type=str, default='TEST_EA1_line_plot_runs', required=False, help="Directory to save runs")
+    parser.add_argument('-dir', '--directory', type=str, default='NEW_TEST_EA1_line_plot_runs', required=False, help="Directory to save runs")
     #EA1_line_plot_runs
 
     return parser.parse_args()
@@ -56,6 +56,18 @@ def main():
     multi = 'yes' if args.multi == 'yes' else 'no'  # Unchanged
     fitfunc = args.fitness_func  # Unchanged
     base_dir = args.directory
+
+    hyperparameters = {
+    "scaling_factor": 0.15,
+    "sigma_prime": 0.05,
+    "alpha": 0.5,
+    "tournament_size": 6,
+    "elite_fraction": 0.8,
+    "mutation_rate": mr,
+    "crossover_rate": cr,
+    "popsize": popsize,
+    "max_gen": mg
+    }
 
     # Create the base directory if it does not exist
     if not os.path.exists(base_dir):
@@ -92,7 +104,7 @@ def main():
 
             # Run the ClassicEA for this enemy and run number
             print(f'\nRunning EA for enemy (set) {enemies}, run {run}\n')
-            ea = ClassicEA(popsize, mg, mr, cr, n_hidden, run_dir, env)  # ADDED
+            ea = ClassicEA(hyperparameters, n_hidden, run_dir, env)  # ADDED
             final_fitness = ea.run_evolution()  # ADDED
 
 
