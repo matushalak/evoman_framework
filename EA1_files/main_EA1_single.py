@@ -16,8 +16,7 @@ import argparse
 from joblib import Parallel, delayed
 from pandas import read_csv
 
-# Import ClassicEA from EA1_optimizer  #CHANGED
-from EA1_optimizer_test import ClassicEA  #CHANGED
+from EA1_optimizer import ClassicEA  #CHANGED
 
 
 def parse_args():  # Unchanged

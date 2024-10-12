@@ -17,7 +17,7 @@ import argparse
 from joblib import Parallel, delayed
 from pandas import read_csv
 
-from EA1_optimizer_test import ClassicEA  # ADDED
+from EA1_optimizer import ClassicEA  # ADDED
 
 def parse_args():
     '''' Function enabling command-line arguments'''
