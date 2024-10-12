@@ -18,6 +18,12 @@ from pandas import read_csv
 from scipy.stats import qmc # only needed for initialize_population_v2
 
 
+#TODO: change stuff that is a global variable: fitfunc
+#TODO: define multi as input in run_game_in_worker
+#TODO: clean up comments (like #CHANGED etc.)
+#TODO: ask matus why basic_solutions exists? Can it be deleted (I assumed so)
+
+
 # ------------------------------ Evaluation function(s) PART 1 ------------------------------ 
 def run_game(env:Environment,individual, test=False):
     '''Runs game and returns individual solution's fitness'''
@@ -177,9 +183,9 @@ class ClassicEA:  #CHANGED
             np.savetxt(self.experiment_name + '/best.txt', best_individual)  #CHANGED
             np.savetxt(self.experiment_name + '/alltime.txt', all_time[0])  #CHANGED
 
-            if not os.path.exists('basic_solutions'):  #CHANGED
-                os.makedirs('basic_solutions')  #CHANGED
-            np.savetxt(f'basic_solutions/{self.env.enemyn}best.txt', best_individual)  #CHANGED
+            #if not os.path.exists('basic_solutions'):  #CHANGED
+            #    os.makedirs('basic_solutions')  #CHANGED
+            #np.savetxt(f'basic_solutions/{self.env.enemyn}best.txt', best_individual)  #CHANGED
 
             # saves simulation state  #CHANGED
             solutions = [population, fitnesses]  #CHANGED
@@ -187,7 +193,7 @@ class ClassicEA:  #CHANGED
             self.env.save_state()  #CHANGED
         
         np.savetxt(self.experiment_name + '/alltime.txt', all_time[0])  #CHANGED
-        np.savetxt(f'basic_solutions/{self.env.enemyn}alltime.txt', all_time[0])  #CHANGED
+        #np.savetxt(f'basic_solutions/{self.env.enemyn}alltime.txt', all_time[0])  #CHANGED
         fim = time.time()  # prints total execution time for experiment  #CHANGED
         print('\nExecution time: ' + str(round((fim - ini) / 60)) + ' minutes \n')  #CHANGED
         print('\nExecution time: ' + str(round((fim - ini))) + ' seconds \n')  #CHANGED
@@ -200,10 +206,6 @@ class ClassicEA:  #CHANGED
         print(f'All best fitness: {all_time[-1]}')  #CHANGED
 
         return all_time[-1]  #CHANGED
-
-
-#TODO: change stuff that is a global variable: fitfunc
-#TODO: define multi in run_game_in_worker
 
 
     # ------------------------------ Evaluation function(s) PART 2 ------------------------------ 
