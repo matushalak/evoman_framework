@@ -19,6 +19,7 @@ from pandas import read_csv
 # Import ClassicEA from EA1_optimizer  #CHANGED
 from EA1_optimizer_test import ClassicEA  #CHANGED
 
+
 def parse_args():  # Unchanged
     '''' Function enabling command-line arguments'''  # Unchanged
     # Initialize the argument parser  # Unchanged

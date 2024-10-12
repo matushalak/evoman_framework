@@ -13,13 +13,12 @@ from demo_controller import player_controller
 import time
 import numpy as np
 import os
-import argparse
 from joblib import Parallel, delayed
 from pandas import read_csv
-from scipy.stats import qmc # only for initialize_population_v2
+from scipy.stats import qmc # only needed for initialize_population_v2
 
 
-# # runs game (evaluate fitness for 1 individual)
+# ------------------------------ Evaluation function(s) PART 1 ------------------------------ 
 def run_game(env:Environment,individual, test=False):
     '''Runs game and returns individual solution's fitness'''
     fitfunc = 'old' #--> NOTE: change
@@ -51,6 +50,8 @@ def run_game_in_worker(name, contr, enemies, ind):
     
     return run_game(worker_env, ind)
 
+
+# ------------------------------ The EA class ------------------------------ 
 class ClassicEA:  #CHANGED
     def __init__(self, hyperparameters:dict, n_hidden_neurons:int, 
                  experiment_name:str, env:Environment):  #CHANGED
@@ -75,7 +76,6 @@ class ClassicEA:  #CHANGED
         self.gene_limits = [-1.0, 1.0]  #CHANGED
         self.best_individual = None  #ADDED
         self.best_fitness = None  #ADDED
-
 
     def run_evolution(self):  #CHANGED
         ''' 
@@ -201,10 +201,12 @@ class ClassicEA:  #CHANGED
 
         return all_time[-1]  #CHANGED
 
+
 #TODO: change stuff that is a global variable: fitfunc
 #TODO: define multi in run_game_in_worker
 
 
+    # ------------------------------ Evaluation function(s) PART 2 ------------------------------ 
     def evaluate_fitnesses(self, population):  #CHANGED
         ''' Evaluates fitness of each individual in the population of solutions parallelized for efficiency'''  # Keeping your comment unchanged
         # Instead of passing the full environment, pass only the configuration or parameters needed to reinitialize it  # Keeping your comment unchanged
@@ -217,7 +219,7 @@ class ClassicEA:  #CHANGED
         return np.array(fitnesses)  # Unchanged
 
 
-
+    # ------------------------------ Initlialization function(s) ------------------------------ 
     def initialize_population(self):  #CHANGED
         ''' Generate a population of
             N = popsize solutions, each solution containing
@@ -226,7 +228,6 @@ class ClassicEA:  #CHANGED
         population = np.random.uniform(self.gene_limits[0], self.gene_limits[1], 
                                        (self.popsize, self.individual_dims))  #CHANGED
         return population  # Unchanged
-
 
     def initialize_population_v2(self):  #CHANGED
         ''' Generate a population using Latin Hypercube Sampling (LHS)
@@ -244,8 +245,8 @@ class ClassicEA:  #CHANGED
         
         return population  # Unchanged
 
-
-    # promoting diversity
+    
+    # ------------------------------ Fitness sharing function(s) ------------------------------ 
     def vectorized_fitness_sharing(self, fitnesses: np.ndarray, population: np.ndarray) -> np.ndarray:  #CHANGED
         """
         Apply fitness sharing as described in the slide to promote diversity and niche creation.
@@ -290,6 +291,7 @@ class ClassicEA:  #CHANGED
         return shared_fitnesses  # Unchanged
 
 
+    # ------------------------------ Parent selection function(s) ------------------------------ 
     def vectorized_tournament_selection(self, population, fitnesses, n_tournaments, k=15):  #CHANGED
         """
         Vectorized tournament selection to select multiple parents in parallel.
@@ -313,7 +315,6 @@ class ClassicEA:  #CHANGED
         selected_parents = population[players[np.arange(n_tournaments), best_indices]]  # Unchanged
         
         return selected_parents  # Unchanged
-
 
     def vectorized_ranking_selection(self, population, fitnesses, n_parents, beta=0.1):  #CHANGED
         """
@@ -346,7 +347,6 @@ class ClassicEA:  #CHANGED
         
         return selected_parents  # Unchanged
 
-
     def vectorized_parent_selection(self, population, fitnesses, n_children=2):  #CHANGED
         """
         Vectorized parent selection using tournament-based selection.
@@ -374,7 +374,88 @@ class ClassicEA:  #CHANGED
         return g_parents, f_parents  # Unchanged
 
 
-    # Survivor selection with elitism and random diversity preservation
+    # ------------------------------ Crossover/recombination function(s) ------------------------------ 
+    def vectorized_blend_recombination(self, p1: np.ndarray, p2: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Vectorized blend recombination (BLX-alpha) to create two offspring.
+        
+        Parameters:
+        p1 (np.ndarray): Parent 1 as an array.
+        p2 (np.ndarray): Parent 2 as an array.
+        alpha (float): Alpha parameter for the blending range.
+        #TODO: maybe add alpha as an argument 
+
+        Returns:
+        tuple: Two offspring arrays (ch1, ch2).
+        """
+        # Calculate the lower and upper bounds for the blending range
+        lower_bound = np.minimum(p1, p2) - self.alpha * np.abs(p1 - p2)
+        upper_bound = np.maximum(p1, p2) + self.alpha * np.abs(p1 - p2)
+
+        # Generate two offspring by sampling from the range [lower_bound, upper_bound]
+        ch1 = np.random.uniform(lower_bound, upper_bound)
+        ch2 = np.random.uniform(lower_bound, upper_bound)
+
+        return ch1, ch2
+
+    def vectorized_crossover(self, all_parents: np.ndarray, p_crossover: float, 
+                             recombination_operator: callable) -> np.ndarray:
+        """
+        Perform fully vectorized recombination to produce all offspring.
+        """
+        # Shuffle the parents to ensure random pairs
+        np.random.shuffle(all_parents)
+        
+        # Split the parents into pairs
+        half_pop_size = len(all_parents) // 2
+        parent1 = all_parents[:half_pop_size,:]
+        parent2 = all_parents[half_pop_size:,:]
+
+        # Decide which pairs will crossover based on the crossover probability
+        crossover_mask = np.random.uniform(0, 1, size=half_pop_size) < p_crossover
+
+        # Perform recombination on selected pairs
+        ch1, ch2 = recombination_operator(parent1, parent2)
+
+        # Create offspring array by filling in the crossover children and copying the parents when no crossover
+        offspring = np.empty_like(all_parents)
+
+        # Assign offspring from crossover or retain parents
+        offspring[:half_pop_size] = np.where(crossover_mask[:, np.newaxis], ch1, parent1)
+        offspring[half_pop_size:2 * half_pop_size] = np.where(crossover_mask[:, np.newaxis], ch2, parent2)
+
+        return offspring
+
+
+    # ------------------------------ Mutation function(s) ------------------------------ 
+    def vectorized_uncorrelated_mut_one_sigma(self, individual: np.ndarray, sigma: float, 
+                                              mutation_rate: float) -> tuple[np.ndarray, float]:
+        """
+        Apply uncorrelated mutation with one step size [vectorized for efficiency]
+        tau = 1/sqrt(n), n = problem size
+        SD' = SD * e**(N(0,tau))
+        x'i = xi + SD' * N(0,1) 
+        """
+        # Calculate the tau parameter
+        tau = 1 / np.sqrt(len(individual))
+        
+        # Calculate the new mutation step size (sigma_prime)
+        sigma_prime = sigma * np.exp(np.random.normal(0, tau))
+
+        # Create a mutation mask (True where mutation will be applied, False otherwise)
+        mutation_mask = np.random.uniform(0, 1, size=len(individual)) < mutation_rate
+
+        # Apply the mutation only where the mask is True
+        mutations = np.random.standard_normal(size=len(individual)) * sigma_prime
+        mutated_individual = np.where(mutation_mask, individual + mutations, individual)
+
+        # Correct the mutated genes to be within the genetic code bounds [-1.0, 1.0]
+        mutated_individual = np.clip(mutated_individual, -1.0, 1.0)
+
+        return mutated_individual, sigma_prime
+
+
+    # ------------------------------ Survivor selection function(s) ------------------------------ 
     def survivor_selection(self, parents, parent_fitnesses, 
                         offspring, offspring_fitnesses, elite_fraction=0.8):
         """Select survivors using elitism with some randomness to maintain diversity."""
@@ -415,85 +496,7 @@ class ClassicEA:  #CHANGED
         return survivors, survivor_fs
 
 
-    def vectorized_blend_recombination(self, p1: np.ndarray, p2: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-        """
-        Vectorized blend recombination (BLX-alpha) to create two offspring.
-        
-        Parameters:
-        p1 (np.ndarray): Parent 1 as an array.
-        p2 (np.ndarray): Parent 2 as an array.
-        alpha (float): Alpha parameter for the blending range.
-        #TODO: maybe add alpha as an argument 
-
-        Returns:
-        tuple: Two offspring arrays (ch1, ch2).
-        """
-        # Calculate the lower and upper bounds for the blending range
-        lower_bound = np.minimum(p1, p2) - self.alpha * np.abs(p1 - p2)
-        upper_bound = np.maximum(p1, p2) + self.alpha * np.abs(p1 - p2)
-
-        # Generate two offspring by sampling from the range [lower_bound, upper_bound]
-        ch1 = np.random.uniform(lower_bound, upper_bound)
-        ch2 = np.random.uniform(lower_bound, upper_bound)
-
-        return ch1, ch2
-
-
-    def vectorized_crossover(self, all_parents: np.ndarray, p_crossover: float, recombination_operator: callable) -> np.ndarray:
-        """
-        Perform fully vectorized recombination to produce all offspring.
-        """
-        # Shuffle the parents to ensure random pairs
-        np.random.shuffle(all_parents)
-        
-        # Split the parents into pairs
-        half_pop_size = len(all_parents) // 2
-        parent1 = all_parents[:half_pop_size,:]
-        parent2 = all_parents[half_pop_size:,:]
-
-        # Decide which pairs will crossover based on the crossover probability
-        crossover_mask = np.random.uniform(0, 1, size=half_pop_size) < p_crossover
-
-        # Perform recombination on selected pairs
-        ch1, ch2 = recombination_operator(parent1, parent2)
-
-        # Create offspring array by filling in the crossover children and copying the parents when no crossover
-        offspring = np.empty_like(all_parents)
-
-        # Assign offspring from crossover or retain parents
-        offspring[:half_pop_size] = np.where(crossover_mask[:, np.newaxis], ch1, parent1)
-        offspring[half_pop_size:2 * half_pop_size] = np.where(crossover_mask[:, np.newaxis], ch2, parent2)
-
-        return offspring
-
-
-    def vectorized_uncorrelated_mut_one_sigma(self, individual: np.ndarray, sigma: float, 
-                                              mutation_rate: float) -> tuple[np.ndarray, float]:
-        """
-        Apply uncorrelated mutation with one step size [vectorized for efficiency]
-        tau = 1/sqrt(n), n = problem size
-        SD' = SD * e**(N(0,tau))
-        x'i = xi + SD' * N(0,1) 
-        """
-        # Calculate the tau parameter
-        tau = 1 / np.sqrt(len(individual))
-        
-        # Calculate the new mutation step size (sigma_prime)
-        sigma_prime = sigma * np.exp(np.random.normal(0, tau))
-
-        # Create a mutation mask (True where mutation will be applied, False otherwise)
-        mutation_mask = np.random.uniform(0, 1, size=len(individual)) < mutation_rate
-
-        # Apply the mutation only where the mask is True
-        mutations = np.random.standard_normal(size=len(individual)) * sigma_prime
-        mutated_individual = np.where(mutation_mask, individual + mutations, individual)
-
-        # Correct the mutated genes to be within the genetic code bounds [-1.0, 1.0]
-        mutated_individual = np.clip(mutated_individual, -1.0, 1.0)
-
-        return mutated_individual, sigma_prime
-
-
+    # ------------------------------ Gain calc. function(s) ------------------------------ 
     def gain_diversity(self, env, best_sol, population_genes):  #CHANGED
         '''
         Obtains gain for best solution in a generation and population diversity of a given generation (average genewise STD)
