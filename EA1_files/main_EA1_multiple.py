@@ -35,8 +35,9 @@ def parse_args():
     parser.add_argument('-mult', '--multi', type=str, required=False, default='yes', help="Single or Multienemy")  # Unchanged
     parser.add_argument('-fit', '--fitness_func', type=str, required=False, default='old', help='Which Fitness function to use? [old / new]')  # Unchanged
     parser.add_argument('-nmes', '--enemies', nargs='+', type=int, required=False, default=[[5, 6], [2,3]], help='Provide list(s) of enemies to train against')  # Unchanged
+    #EA1_line_plot_runs     
     parser.add_argument('-dir', '--directory', type=str, default='NEW_TEST_EA1_line_plot_runs', required=False, help="Directory to save runs")
-    #EA1_line_plot_runs
+    parser.add_argument('-nruns', '--num_runs', type=int, required=False, default=100, help="Number of repetitive ClassicEA runs")  # Unchanged
 
     return parser.parse_args()
 
@@ -56,6 +57,7 @@ def main():
     multi = 'yes' if args.multi == 'yes' else 'no'  # Unchanged
     fitfunc = args.fitness_func  # Unchanged
     base_dir = args.directory
+    num_runs = args.num_runs
 
     hyperparameters = {
     "scaling_factor": 0.15,
@@ -84,7 +86,7 @@ def main():
         if not os.path.exists(enemy_dir):
             os.makedirs(enemy_dir)
 
-        for run in range(1, 11):  # Run the EA 10 times for each enemy
+        for run in range(1, num_runs+1):  # Run the EA e.g. 10 times for each enemy
             run_dir = os.path.join(enemy_dir, f'run_{run}_EN{enemies}')
             if not os.path.exists(run_dir):
                 os.makedirs(run_dir)
@@ -103,7 +105,7 @@ def main():
             env.state_to_log() # checks environment state
 
             # Run the ClassicEA for this enemy and run number
-            print(f'\nRunning EA for enemy (set) {enemies}, run {run}\n')
+            print(f'\nRunning EA1 (classis) for enemy (set) {enemies}, run {run}\n')
             ea = ClassicEA(hyperparameters, n_hidden, run_dir, env)  # ADDED
             final_fitness = ea.run_evolution()  # ADDED
 

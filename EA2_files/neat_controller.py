@@ -60,6 +60,51 @@ class neat_controller(Controller):
 		return [left, right, jump, shoot, release]
 
 
+# implements controller structure for player
+class bayesian_neat_controller(Controller):
+	def __init__(self, config_path):
+		# Input (20 sensors) -> Hidden -> OUTPUT (5 decisions)
+		# deterine (starting) number of hidden nodes in hidden layer
+		self.config = config_path
+	# in neat individual solutions are graphs representing whole network structure
+	# dont need set method 
+	# def set(self,genome):
+	# 	neat.nn.FeedForwardNetwork.create(genome, self.config)
+	# CAN OVERWRITE THIS (eg. if we want to IMPLEMENT NEAT)
+	def control(self, inputs, controller:neat.nn.FeedForwardNetwork):
+		# Normalises the input [0,1] using min-max scaling
+		inputs = (inputs-min(inputs))/float((max(inputs)-min(inputs)))
+		output = controller.activate(inputs)
+
+		# takes decisions about sprite actions
+		if output[0] > 0.5:
+			left = 1
+		else:
+			left = 0
+
+		if output[1] > 0.5:
+			right = 1
+		else:
+			right = 0
+
+		if output[2] > 0.5:
+			jump = 1
+		else:
+			jump = 0
+
+		if output[3] > 0.5:
+			shoot = 1
+		else:
+			shoot = 0
+
+		if output[4] > 0.5:
+			release = 1
+		else:
+			release = 0
+
+		return [left, right, jump, shoot, release]
+
+
 # implements controller structure for enemy
 class enemy_controller(Controller):
 	def __init__(self, _n_hidden):

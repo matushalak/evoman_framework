@@ -7,7 +7,7 @@ import multiprocessing
 import os
 import neat
 from evoman.environment import Environment
-from demo_controller import player_controller
+#from demo_controller import player_controller
 from neat_controller import neat_controller
 from time import time
 from pandas import DataFrame
@@ -22,39 +22,13 @@ def parse_args():
     # Define arguments
     parser.add_argument('-name', '--exp_name', type=str, required=False, help="Experiment name")
     parser.add_argument('-mg', '--maxgen', type=int, required=False, default = 10, help="Max generations (eg. 500)")
-    parser.add_argument('-nmes', '--enemies', nargs = '+', type = int, required=True, default = False, help='Provide list of enemies to train against')
+    parser.add_argument('-nmes', '--enemies', nargs='+', type=int, required=False, default=[[5, 6], [2,3]], help='Provide list(s) of enemies to train against')
     parser.add_argument('-mult', '--multi', type=str, required=False, default = 'yes', help="Single or Multienemy")
+    #EA1_line_plot_runs   
+    parser.add_argument('-dir', '--directory', type=str, default='NEW_TEST_EA2_neat_line_plot_runs', required=False, help="Directory to save runs")
+    parser.add_argument('-nruns', '--num_runs', type=int, required=False, default=5, help="Number of repetitive neat runs")  # Unchanged
     
     return parser.parse_args()
-
-args = parse_args()
-global env, cfg, name, enemies, multi, maxgen
-cfg = 'neat_config.txt'
-maxgen = args.maxgen
-enemies = args.enemies
-multi  = 'yes' if args.multi == 'yes' else 'no'
-
-if isinstance(args.exp_name, str):
-    name = 'neat_' + args.exp_name
-else:
-    name = 'neat_' + input("Enter Experiment (directory) Name:")
-
-# add enemy names
-name = name + '_' + f'{str(enemies).strip('[]').replace(',', '').replace(' ', '')}'
-if not os.path.exists(name):
-    os.makedirs(name)
-
-env = Environment(experiment_name=name,
-                enemies=enemies,
-                multiplemode=multi, 
-                playermode="ai",
-                player_controller=neat_controller(config_path=cfg), # you  can insert your own controller here
-                enemymode="static",
-                level=2,
-                speed="fastest",
-                visuals=False)
-
-os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 def eval_genome(genome,config):
     '''
@@ -107,5 +81,45 @@ def run(config_path):
     # Display winning genome
     print('\nBest genome:\n{!s}'.format(winner))
 
-if __name__ == '__main__':
-    run(config_path=cfg)    
+
+args = parse_args()
+global env, cfg, name, enemy_sets, multi, maxgen
+cfg = 'neat_config.txt'
+maxgen = args.maxgen
+enemy_sets = args.enemies
+multi  = 'yes' if args.multi == 'yes' else 'no'
+base_dir = args.directory
+num_runs = args.num_runs
+
+# Create the base directory if it does not exist
+if not os.path.exists(base_dir):
+    os.makedirs(base_dir)
+
+os.environ["SDL_VIDEODRIVER"] = "dummy"
+
+# Run the EA for each enemy
+for enemies in enemy_sets:
+    enemy_dir = os.path.join(base_dir, f'EN{enemies}')
+    if not os.path.exists(enemy_dir):
+        os.makedirs(enemy_dir)
+
+    for run_i in range(1, num_runs+1):  # Run the EA e.g. 10 times for each enemy
+        run_dir = os.path.join(enemy_dir, f'run_{run_i}_EN{enemies}')
+        if not os.path.exists(run_dir):
+            os.makedirs(run_dir)
+
+        env = Environment(experiment_name=run_dir,
+                    enemies=enemies,
+                    multiplemode=multi,  # Unchanged
+                    playermode="ai",
+                    player_controller=neat_controller(config_path=cfg),
+                    enemymode="static",
+                    level=2,
+                    speed="fastest",
+                    visuals=False)
+
+        # Run the ClassicEA for this enemy and run number
+        print(f'\nRunning EA2 (neat) for enemy (set) {enemies}, run {run_i}\n')
+        run(config_path=cfg)  
+
+

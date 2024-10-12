@@ -14,10 +14,10 @@ import numpy as np
 # Set the base folder for dummy data
 base_folder = 'gain_results'
 os.makedirs(base_folder, exist_ok=True)
-algorithms = ['EA1', 'EA2']
+algorithms = ['EA1']#, 'EA2']
 folder_names = {
     'EA1': 'EA1_report_results',  # Folder for EA1
-    'EA2': 'EA2_report_results'  # Folder for EA2
+    #'EA2': 'EA2_report_results'  # Folder for EA2
 }
 enemies = [5, 6, 8]
 n_hidden = 10

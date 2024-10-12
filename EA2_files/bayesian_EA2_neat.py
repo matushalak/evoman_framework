@@ -8,7 +8,7 @@ import os
 import neat
 from evoman.environment import Environment
 # from demo_controller import player_controller
-from bayesian_neat_controller import bayesian_neat_controller
+from neat_controller import bayesian_neat_controller
 from time import time
 from pandas import DataFrame
 import argparse
