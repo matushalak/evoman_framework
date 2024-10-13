@@ -7,7 +7,7 @@ import multiprocessing
 import os
 import neat
 from evoman.environment import Environment
-from demo_controller import player_controller
+# from demo_controller import player_controller
 from neat_controller import neat_controller
 from time import time
 from pandas import DataFrame
@@ -62,7 +62,10 @@ def eval_genome(genome,config):
     '''
     net = neat.nn.FeedForwardNetwork.create(genome, config)
     fitness ,p,e,t = env.play(pcont=net)
-    return fitness
+    return p - e # min player life - max enemy life
+    # to focus on beating enemies
+    # return float(100 - e)
+    # return 0.9*(100 - e) + 0.1*(100 - p)
 
 def save_stats(StatsReporter):
     results = DataFrame({'gen':list(range(maxgen)),

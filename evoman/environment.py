@@ -398,8 +398,13 @@ class Environment(object):
         return 0.9*(100 - self.get_enemylife()) + 0.1*self.get_playerlife() - numpy.log(self.get_time())
 
     # default fitness function for consolidating solutions among multiple games
-    def cons_multi(self,values):
-        return values.mean() - values.std()
+    def cons_multi(self,values, func):
+        '''
+        mode can be min, max, mean or any other function applied to the values
+        '''
+        # return values.max() # if using enemy health
+        return func(values) # minimum of enemies is the fitness (if using fitness)
+        # return values.mean() - values.std()
 
     # measures the energy of the player
     def get_playerlife(self):
@@ -604,10 +609,10 @@ class Environment(object):
             venemylife.append(enemylife)
             vtime.append(time)
 
-        vfitness = self.cons_multi(numpy.array(vfitness))
-        vplayerlife = self.cons_multi(numpy.array(vplayerlife))
-        venemylife = self.cons_multi(numpy.array(venemylife))
-        vtime = self.cons_multi(numpy.array(vtime))
+        vfitness = self.cons_multi(numpy.array(vfitness), numpy.mean)
+        vplayerlife = self.cons_multi(numpy.array(vplayerlife), min)
+        venemylife = self.cons_multi(numpy.array(venemylife), max)
+        vtime = self.cons_multi(numpy.array(vtime), max)
 
         return    vfitness, vplayerlife, venemylife, vtime
 
