@@ -28,7 +28,7 @@ def parse_args():
     return parser.parse_args()
 
 args = parse_args()
-global env, cfg, name, enemies, multi, maxgen
+global cfg, name, enemies, multi, maxgen
 cfg = 'neat_config.txt'
 maxgen = args.maxgen
 enemies = args.enemies
@@ -44,7 +44,25 @@ name = name + '_' + f'{str(enemies).strip('[]').replace(',', '').replace(' ', ''
 if not os.path.exists(name):
     os.makedirs(name)
 
-env = Environment(experiment_name=name,
+os.environ["SDL_VIDEODRIVER"] = "dummy"
+
+def save_stats(stats, filename):
+    '''
+    Saves the evolutionary statistics to a CSV file.
+    '''
+    results = DataFrame({
+        'gen': list(range(len(stats.most_fit_genomes))),
+        'best': [c.fitness for c in stats.most_fit_genomes],
+        'mean': stats.get_fitness_mean(),
+        'sd': stats.get_fitness_stdev()
+    })
+    results.to_csv(filename, index=False)
+
+def eval_genome(genome,config):
+    '''
+    Parallelized version
+    '''
+    env = Environment(experiment_name=name,
                 enemies=enemies,
                 multiplemode=multi, 
                 playermode="ai",
@@ -54,34 +72,19 @@ env = Environment(experiment_name=name,
                 speed="fastest",
                 visuals=False)
 
-os.environ["SDL_VIDEODRIVER"] = "dummy"
-
-def eval_genome(genome,config):
-    '''
-    Parallelized version
-    '''
     net = neat.nn.FeedForwardNetwork.create(genome, config)
     fitness ,p,e,t = env.play(pcont=net)
-    return float(p - e) # min player life - max enemy life
+    return float(p - e) # min player life - max enemy life : modified Gain measure
     # to focus on beating enemies
     # return float(100 - e)
     # return 0.9*(100 - e) + 0.1*(100 - p)
-
-def save_stats(StatsReporter):
-    results = DataFrame({'gen':list(range(maxgen)),
-                         'best':StatsReporter.get_fitness_stat(max),
-                         'mean':StatsReporter.get_fitness_mean(),
-                         'sd':StatsReporter.get_fitness_stdev(),
-                         'med':StatsReporter.get_fitness_median(),
-                         'worst':StatsReporter.get_fitness_stat(min)})
-    results.to_csv(name + '/results.txt')
 
 def run(config_path):
     start = time()
     config = neat.Config(neat.DefaultGenome, neat.DefaultReproduction,
 							neat.DefaultSpeciesSet, neat.DefaultStagnation, config_path)
     
-    # population
+    # Initial population
     pop = neat.Population(config)
 
     # Add a stdout reporter to show progress in the terminal.
@@ -89,17 +92,44 @@ def run(config_path):
     stats = neat.StatisticsReporter()
     pop.add_reporter(stats)
 
-    # Run for N generations
-    # parallel
+    # Parallel evaluator
     parallel_evals = neat.ParallelEvaluator(multiprocessing.cpu_count(), eval_genome)
-    winner = pop.run(parallel_evals.evaluate, maxgen)
 
-    # winner = pop.run(eval_genomes, 50) # classic
-    winn_gene = stats.best_genome()
-    winner_net = neat.nn.FeedForwardNetwork.create(winn_gene, config)
+    curriculum = {1:{
+                    'enems':[1,7],
+                    'gens':maxgen},
+                  2:{
+                    'enems':[1,7,3,5],
+                    'gens':maxgen},
+                  3:{
+                    'enems':[1,7,3,5,8],
+                    'gens':maxgen},
+                  4:{
+                    'enems':[4,1,7,3,5,8],
+                    'gens':maxgen},
+                  5:{
+                    'enems':[4,1,7,3,5,8,6],
+                    'gens':maxgen}
+                    }
 
-    # save results
-    save_stats(stats)
+    # NOTE CURRICULUM LEARNING
+    for stage, curriculum in curriculum.items():
+        print(f"\nStarting Stage {stage} with enemies {curriculum['enems']}")
+
+        #update env with new enemies
+        enemies = curriculum['enems']
+
+        # Run for N generations
+        pop.run(parallel_evals.evaluate, curriculum['gens'])
+
+        winn_gene = stats.best_genome()
+        winner_net = neat.nn.FeedForwardNetwork.create(winn_gene, config)
+        with open(name + f'/stage{stage}_best.pkl', 'wb') as f:
+            pkl.dump(winner_net, f)
+
+        # save results
+        save_stats(stats, name + f'/stage{stage}_stats.csv')
+
     # save controller
     with open(name + '/best.pkl', 'wb') as f:
         pkl.dump(winner_net, f)
@@ -108,7 +138,7 @@ def run(config_path):
     print(end)
 
     # Display winning genome
-    print('\nBest genome:\n{!s}'.format(winner))
+    print('\nBest genome:\n{!s}'.format(winn_gene))
 
 if __name__ == '__main__':
     run(config_path=cfg)    
