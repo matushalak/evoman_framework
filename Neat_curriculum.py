@@ -72,6 +72,8 @@ class NEAT:
                     level=2,
                     speed="fastest",
                     visuals=False)
+        
+        env.update_parameter('enemies', self.enemies)
 
         net = neat.nn.FeedForwardNetwork.create(genome, config)
         fitness ,p,e,t = env.play(pcont=net)
@@ -92,9 +94,6 @@ class NEAT:
         pop.add_reporter(neat.StdOutReporter(True))
         stats = neat.StatisticsReporter()
         pop.add_reporter(stats)
-
-        # Parallel evaluator
-        parallel_evals = neat.ParallelEvaluator(multiprocessing.cpu_count(), eval_genome)
 
         curriculum = {1:{
                         'enems':[1,7],
@@ -120,6 +119,9 @@ class NEAT:
             #update env with new enemies
             self.enemies = curriculum['enems']
 
+            # Parallel evaluator
+            parallel_evals = neat.ParallelEvaluator(multiprocessing.cpu_count(), self.eval_genome)
+
             # Run for N generations
             pop.run(parallel_evals.evaluate, curriculum['gens'])
 
@@ -143,4 +145,4 @@ class NEAT:
 
 if __name__ == '__main__':
     Neat = NEAT()
-    Neat.run()
+    Neat.run(Neat.cfg)

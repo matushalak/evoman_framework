@@ -172,7 +172,7 @@ class Environment(object):
         else:
             exec('self.'+name +"= "+ str(value))
 
-        self.print_logs("PARAMETER CHANGE: "+name+" = "+str(value))
+        # self.print_logs("PARAMETER CHANGE: "+name+" = "+str(value))
 
 
 
@@ -610,8 +610,8 @@ class Environment(object):
             vtime.append(time)
 
         vfitness = self.cons_multi(numpy.array(vfitness), numpy.mean)
-        vplayerlife = self.cons_multi(numpy.array(vplayerlife), min)
-        venemylife = self.cons_multi(numpy.array(venemylife), max)
+        vplayerlife = self.cons_multi(numpy.array(vplayerlife), numpy.mean)
+        venemylife = self.cons_multi(numpy.array(venemylife), numpy.mean)
         vtime = self.cons_multi(numpy.array(vtime), max)
 
         return    vfitness, vplayerlife, venemylife, vtime

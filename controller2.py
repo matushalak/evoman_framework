@@ -22,12 +22,18 @@ def parse_args():
     # Initialize the argument parser
     parser = argparse.ArgumentParser(description="Play with chosen best solution of chosen experiment:")
     parser.add_argument('-res', '--results', type=str, required=False, default = False, help= "Provide path to experiments file to analyze:")
+    parser.add_argument('-sol', '--Solution', type=str, required=False, default = False, help= "Provide path to solution file to analyze:")
     parser.add_argument('-tagainst', '--test_against', nargs = '+', type = int, required=False, default = 10, help='Provide list of enemies to test against')
     return parser.parse_args()
 
 # get experiment directory
 args = parse_args()
-if isinstance(args.results, str):
+if isinstance(args.Solution, str):
+	exp_dir = args.results
+	solution = exp_dir + '/' + args.Solution
+	
+
+elif isinstance(args.results, str):
 	exp_dir = args.results
 	if 'alltime.txt' in os.listdir(exp_dir):
 		solution = exp_dir + '/alltime.txt'
