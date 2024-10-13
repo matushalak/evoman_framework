@@ -95,6 +95,8 @@ class NEAT:
         stats = neat.StatisticsReporter()
         pop.add_reporter(stats)
 
+        # Different enemy sets = different 'curricula', starting from easy to hard
+        # TODO REVISE CURRICULA!!!
         curriculum = {1:{
                         'enems':[1,7],
                         'gens':self.maxgen},
@@ -121,6 +123,9 @@ class NEAT:
 
             # Parallel evaluator
             parallel_evals = neat.ParallelEvaluator(multiprocessing.cpu_count(), self.eval_genome)
+
+            # TODO add expert solutions to initial population in stages
+            # ---------------------------
 
             # Run for N generations
             pop.run(parallel_evals.evaluate, curriculum['gens'])
