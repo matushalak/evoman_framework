@@ -398,6 +398,10 @@ class ClassicEA:  #CHANGED
         ch1 = np.random.uniform(lower_bound, upper_bound)
         ch2 = np.random.uniform(lower_bound, upper_bound)
 
+        # Clip offspring to stay within the specified bounds
+        ch1 = np.clip(ch1, -1, 1)
+        ch2 = np.clip(ch2, -1, 1)
+
         return ch1, ch2
 
     def vectorized_crossover(self, all_parents: np.ndarray, p_crossover: float, 

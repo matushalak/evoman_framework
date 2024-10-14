@@ -27,12 +27,12 @@ def parse_args():  # Unchanged
     # Define arguments  # Unchanged
     parser.add_argument('-name', '--exp_name', type=str, required=False, help="Experiment name")  # Unchanged
     parser.add_argument('-pop', '--popsize', type=int, required=False, default=150, help="Population size (eg. 100)")  # Unchanged
-    parser.add_argument('-mg', '--maxgen', type=int, required=False, default=15, help="Max generations (eg. 500)")  # Unchanged
+    parser.add_argument('-mg', '--maxgen', type=int, required=False, default=100, help="Max generations (eg. 500)")  # Unchanged
     parser.add_argument('-cr', '--crossover_rate', type=float, required=False, default=0.85, help="Crossover rate (e.g., 0.8)")  # Unchanged
     parser.add_argument('-mr', '--mutation_rate', type=float, required=False, default=0.25, help="Mutation rate (e.g., 0.05)")  # Unchanged
     parser.add_argument('-nh', '--nhidden', type=int, required=False, default=10, help="Number of Hidden Neurons (eg. 10)")  # Unchanged
     parser.add_argument('-tst', '--test', type=bool, required=False, default=False, help="Train or Test (default = Train)")  # Unchanged
-    parser.add_argument('-nmes', '--enemies', nargs='+', type=int, required=False, default=[5, 6], help='Provide list of enemies to train against')  # Unchanged
+    parser.add_argument('-nmes', '--enemies', nargs='+', type=int, required=False, default=[6, 7 ,4], help='Provide list of enemies to train against')  # Unchanged
     parser.add_argument('-mult', '--multi', type=str, required=False, default='yes', help="Single or Multienemy")  # Unchanged
     parser.add_argument('-fit', '--fitness_func', type=str, required=False, default='old', help='Which Fitness function to use? [old / new]')  # Unchanged
 
@@ -55,11 +55,11 @@ def main():
     fitfunc = args.fitness_func  # Unchanged
 
     hyperparameters = {
-    "scaling_factor": 0.15,
-    "sigma_prime": 0.05,
-    "alpha": 0.5,
-    "tournament_size": 6,
-    "elite_fraction": 0.8,
+    "scaling_factor": 0.08,
+    "sigma_prime": 0.1,
+    "alpha": 0.3,
+    "tournament_size": 8,
+    "elite_fraction": 0.1,
     "mutation_rate": mr,
     "crossover_rate": cr,
     "popsize": popsize,
