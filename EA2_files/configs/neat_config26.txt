@@ -32,8 +32,8 @@ compatibility_disjoint_coefficient = 1.0
 compatibility_weight_coefficient   = 0.5
 
 # connection add/remove rates
-conn_add_prob           = 0.6728415527349392
-conn_delete_prob        = 0.4577660345882629
+conn_add_prob           = 0.6397189896324297
+conn_delete_prob        = 0.3521390529256762
 
 # connection enable options
 enabled_default         = True
@@ -43,11 +43,11 @@ feed_forward            = True
 initial_connection      = fs_neat_hidden
 
 # node add/remove rates
-node_add_prob           = 0.3263470348079497
-node_delete_prob        = 0.06581567226164761
+node_add_prob           = 0.14016291241516818
+node_delete_prob        = 0.14241212701044909
 
 # network parameters
-num_hidden              = 10
+num_hidden              = 12
 num_inputs              = 20
 num_outputs             = 5
 

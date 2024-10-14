@@ -55,13 +55,13 @@ def main():
     fitfunc = args.fitness_func  # Unchanged
 
     hyperparameters = {
-    "scaling_factor": 0.08,
-    "sigma_prime": 0.1,
-    "alpha": 0.3,
-    "tournament_size": 8,
-    "elite_fraction": 0.1,
-    "mutation_rate": mr,
-    "crossover_rate": cr,
+    "scaling_factor": 0.236170145228546,
+    "sigma_prime": 0.321165796694383,
+    "alpha": 0.337159209115772,
+    "tournament_size": 4,
+    "elite_fraction": 0.361110061941829,
+    "mutation_rate": 0.500170314290922,
+    "crossover_rate": 0.290183483321576,
     "popsize": popsize,
     "max_gen": mg
     }

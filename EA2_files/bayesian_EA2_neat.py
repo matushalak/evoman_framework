@@ -38,11 +38,11 @@ def parse_args():
     # Define arguments
     parser.add_argument('-name', '--exp_name', type=str, required=False, default='bayes_run', help="Experiment name")
     parser.add_argument('-dbname', '--db_name', type=str, required=False, default='bayesian_neat_TEST', help="Database name")
-    parser.add_argument('-mg', '--maxgen', type=int, required=False, default = 5, help="Max generations (eg. 500)")
+    parser.add_argument('-mg', '--maxgen', type=int, required=False, default = 100, help="Max generations (eg. 500)")
     parser.add_argument('-nmes', '--enemies', nargs = '+', type = int, required=False, default = [5, 6], help='Provide list of enemies to train against')
     parser.add_argument('-mult', '--multi', type=str, required=False, default = 'yes', help="Single or Multienemy")
-    parser.add_argument('-trials', '--num_trials', type=int, required=False, default=3, help='Number of bayesian optimization trials') 
-    parser.add_argument('-reps', '--num_reps', type=int, required=False, default=2, 
+    parser.add_argument('-trials', '--num_trials', type=int, required=False, default=100, help='Number of bayesian optimization trials') 
+    parser.add_argument('-reps', '--num_reps', type=int, required=False, default=3, 
                         help='Number of NEAT repititions with the same set of params') 
     parser.add_argument('-lc', '--l_and_c', type=bool, required=False, default = True, 
                         help="Loads and continues previous study if exists and set to True")
@@ -86,7 +86,7 @@ def eval_genome(genome, config):
     
     net = neat.nn.FeedForwardNetwork.create(genome, config)
     fitness ,p,e,t = env.play(pcont=net)
-    return fitness
+    return p - e
 
 def save_stats(StatsReporter):
     results = DataFrame({'gen':list(range(maxgen)),

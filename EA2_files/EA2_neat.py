@@ -29,7 +29,7 @@ def parse_args():
 
 args = parse_args()
 global env, cfg, name, enemies, multi, maxgen
-cfg = 'neat_config.txt'
+cfg = 'configs/neat_config37.txt'
 maxgen = args.maxgen
 enemies = args.enemies
 multi  = 'yes' if args.multi == 'yes' else 'no'
