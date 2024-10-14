@@ -97,21 +97,30 @@ class NEAT:
 
         # Different enemy sets = different 'curricula', starting from easy to hard
         # TODO REVISE CURRICULA!!!
-        curriculum = {1:{
+        curriculum = {0:{
                         'enems':[1,7],
                         'gens':self.maxgen},
+                    1:{
+                        'enems':[1,7,3],
+                        'gens':self.maxgen},
                     2:{
-                        'enems':[1,7,3,5],
-                        'gens':self.maxgen},
+                        'enems':[4,5],
+                        'gens':self.maxgen},    
                     3:{
-                        'enems':[1,7,3,5,8],
-                        'gens':self.maxgen},
+                        'enems':[1,7,3,8],
+                        'gens':3/2 * self.maxgen},
                     4:{
-                        'enems':[4,1,7,3,5,8],
-                        'gens':self.maxgen},
+                        'enems':[2,5,8],
+                        'gens':3/2 * self.maxgen},
                     5:{
-                        'enems':[4,1,7,3,5,8,6],
-                        'gens':self.maxgen}
+                        'enems':[4,1,7,3,8],
+                        'gens':2*self.maxgen},
+                    6:{
+                        'enems':[4,2,8],
+                        'gens':1/2 * self.maxgen},
+                    7:{
+                        'enems':[4,1,7,3,8,6],
+                        'gens':3*self.maxgen}
                         }
 
         # NOTE CURRICULUM LEARNING
