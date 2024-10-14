@@ -10,7 +10,7 @@ import os
 
 from evoman.environment import Environment
 from demo_controller import player_controller
-from neat_controller import neat_controller
+# from neat_controller import neat_controller
 
 # imports other libs
 import numpy as np

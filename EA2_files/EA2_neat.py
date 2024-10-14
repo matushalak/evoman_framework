@@ -62,7 +62,7 @@ def eval_genome(genome,config):
     '''
     net = neat.nn.FeedForwardNetwork.create(genome, config)
     fitness ,p,e,t = env.play(pcont=net)
-    return fitness
+    return p - e
 
 def save_stats(StatsReporter):
     results = DataFrame({'gen':list(range(maxgen)),

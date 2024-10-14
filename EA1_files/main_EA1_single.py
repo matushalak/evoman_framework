@@ -131,7 +131,7 @@ def run_game(env:Environment,individual, test=False):
         if fitfunc == 'new':
             return (p-(2*e)) - 0.01*t
         else: 
-            return fitness
+            return p - e
     else:
         return fitness ,p,e,t
 
