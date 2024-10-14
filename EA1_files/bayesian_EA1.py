@@ -35,7 +35,7 @@ def parse_args():
     parser.add_argument('-mult', '--multi', type=str, required=False, default = 'yes', help="Single or Multienemy")
     parser.add_argument('-fit', '--fitness_func', type=str, required=False, default='old', help = 'Which Fitness function to use? [old / new]')
     parser.add_argument('-trials', '--num_trials', type=int, required=False, default=100, help='Number of bayesian optimization trials') 
-    parser.add_argument('-reps', '--num_reps', type=int, required=False, default=5, 
+    parser.add_argument('-reps', '--num_reps', type=int, required=False, default=3, 
                         help='Number of NEAT repititions with the same set of params') 
     parser.add_argument('-lc', '--l_and_c', type=bool, required=False, default = True, 
                         help="Loads and continues previous study if exists and set to True")
