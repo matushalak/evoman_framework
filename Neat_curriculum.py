@@ -82,11 +82,28 @@ class NEAT:
         # return float(100 - e)
         # return 0.9*(100 - e) + 0.1*(100 - p)
 
+    # NOTE not that simple, neat uses ID numbers, quite hard to incorporate
+    def run_single (self, cfg, enemy, how_many_specialists):
+        pop = neat.Population(cfg)
+        stats = neat.StatisticsReporter()
+        pop.add_reporter(stats)
+
+        self.enemies = [enemy]
+        self.multi = 'no'
+        # Parallel evaluator
+        parallel_evals = neat.ParallelEvaluator(multiprocessing.cpu_count(), self.eval_genome)
+        pop.run(parallel_evals.evaluate, round(2/3*self.maxgen))
+
+        breakpoint()
+        # key is about the species: need to assign to species from actual population
+        return stats.best_genomes(how_many_specialists)
+
+
     def run(self, config_path):
         start = time()
         config = neat.Config(neat.DefaultGenome, neat.DefaultReproduction,
                                 neat.DefaultSpeciesSet, neat.DefaultStagnation, config_path)
-        
+
         # Initial population
         pop = neat.Population(config)
 
@@ -104,37 +121,40 @@ class NEAT:
                         'enems':[1,7,3],
                         'gens':self.maxgen},
                     2:{
-                        'enems':[4,5],
+                        'enems':[5,4],
                         'gens':self.maxgen},    
                     3:{
                         'enems':[1,7,3,8],
-                        'gens':3/2 * self.maxgen},
+                        'gens':self.maxgen},
                     4:{
-                        'enems':[2,5,8],
-                        'gens':3/2 * self.maxgen},
+                        'enems':[8,2],
+                        'gens':self.maxgen},
                     5:{
-                        'enems':[4,1,7,3,8],
-                        'gens':2*self.maxgen},
+                        'enems':[4,3,8,1],
+                        'gens':self.maxgen},
                     6:{
-                        'enems':[4,2,8],
-                        'gens':1/2 * self.maxgen},
+                        'enems':[5,8,6],
+                        'gens':self.maxgen},
                     7:{
-                        'enems':[4,1,7,3,8,6],
-                        'gens':3*self.maxgen}
+                        'enems':[4,3,8,6,7],
+                        'gens':self.maxgen}
                         }
 
         # NOTE CURRICULUM LEARNING
         for stage, curriculum in curriculum.items():
             print(f"\nStarting Stage {stage} with enemies {curriculum['enems']}")
+            
+            # NOTE not that simple :(
+            # experts = self.run_single(config, curriculum['enems'][-1], 20)
+            # # update population
+            # pop.population.update(experts)
 
             #update env with new enemies
+            # self.multi = 'yes'
             self.enemies = curriculum['enems']
 
             # Parallel evaluator
             parallel_evals = neat.ParallelEvaluator(multiprocessing.cpu_count(), self.eval_genome)
-
-            # TODO add expert solutions to initial population in stages
-            # ---------------------------
 
             # Run for N generations
             pop.run(parallel_evals.evaluate, curriculum['gens'])
