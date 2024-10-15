@@ -56,7 +56,9 @@ def run_game_in_worker(name, contr, enemies, ind):
     
     return run_game(worker_env, ind)
 
-
+# TODO: make sure specialists not counted twice for Hall of Fame & Diversity increase
+# TODO: experiment with more / less frequent introduction of specialists
+# TODO: don't even introduce 4 & 6 -> just try to get good performance on the 6 existing ones
 # ------------------------------ The EA class ------------------------------ 
 class ClassicEA:  #CHANGED
     def __init__(self, hyperparameters:dict, n_hidden_neurons:int, 
