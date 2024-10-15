@@ -85,6 +85,9 @@ class ClassicEA:  #CHANGED
         # XXX new multiple sigmas mutation
         self.nsigma_primes = np.random.uniform(-1,1,self.individual_dims) 
         
+        # XXX Hall of Fame
+        self.HOF = {} # initially empty
+        self.hof_size = 10
 
     def run_evolution(self):  #CHANGED
         ''' 
@@ -95,8 +98,12 @@ class ClassicEA:  #CHANGED
 
         # Initialization for new experiment
         ini_g = 0  #CHANGED
-        population = self.initialize_population()  #CHANGED
+        population = self.initialize_population_v2()  #CHANGED XXX Using Latin Hypercube Sampling for initialization
         fitnesses = self.evaluate_fitnesses(population)  #CHANGED
+
+        # XXX Initial Hall of Fame = hof_size best individuals of first generation
+        self.hall_of_fame(self.hof_size, population, fitnesses)
+
         solutions = [population, fitnesses]  #ADDED
         self.env.update_solutions(solutions)  #ADDED
 
@@ -122,11 +129,16 @@ class ClassicEA:  #CHANGED
                     + str(round(std_fitness, 6)) + ' ' + str(round(gain, 6)) + ' ' + str(round(diversity, 6)))  #CHANGED
         file_aux.close()  #CHANGED
 
+        # XXX Bringing back: Tracking stagnation
+        stagnation = 0
+        how_many_HOF = 1 # start with keeping GOAT around
+
         # evolution loop
         for i in range(self.max_gen):  #CHANGED
 
             # Niching (fitness sharing)
-            shared_fitnesses = self.vectorized_fitness_sharing(fitnesses, population)  #CHANGED
+            # shared_fitnesses = self.vectorized_fitness_sharing(fitnesses, population)  #CHANGED
+            shared_fitnesses = fitnesses # No fitness sharing
 
             # Parent selection
             parents, parent_fitnesses = self.vectorized_parent_selection(population, shared_fitnesses)  #CHANGED
@@ -163,6 +175,31 @@ class ClassicEA:  #CHANGED
 
             best_fitness = fitnesses[best_idx]  #CHANGED
             best_individual = population[best_idx]  #CHANGED
+
+            # XXX Hall of Fame & Stagnation shenanigans
+            if best_fitness < max(self.HOF):
+                stagnation += 1
+                # Every 3 stagnating generations add increase how many individuals from HOF added
+                # and add those individuals
+                if stagnation % 3 == 0:
+                    if how_many_HOF < self.hof_size:
+                        how_many_HOF += 1
+            else:
+                stagnation = 0
+                how_many_HOF = 1
+
+            # regardless of anything, always keep GOAT around (N = 1), if stagnation increase N
+            hof_genes, hof_fits = [], []
+            for INDIVIDUAL, FITNESS in self.hall_of_fame(N = how_many_HOF,OUT = True):
+                hof_genes.append(INDIVIDUAL)
+                hof_fits.append(FITNESS)
+            try:
+                population[-how_many_HOF:,:], fitnesses[-how_many_HOF:] = hof_genes, hof_fits
+            except ValueError:
+                breakpoint()
+
+            # XXX Update Hall of Fame every generation (updates self.HOF)
+            self.hall_of_fame(self.hof_size, population, fitnesses)
 
             # stats  #CHANGED
             mean_fitness = np.mean(fitnesses)  #CHANGED
@@ -217,6 +254,32 @@ class ClassicEA:  #CHANGED
 
         return all_time[-1]  #CHANGED
 
+    # ------------------------------ HALL of FAME ------------------------------ 
+    def hall_of_fame(self,
+                     N, pop = None, fits = None, OUT = False):
+        if OUT == False:
+            # Make new hall_of fame
+            if self.HOF == {}:
+                # in our EA, elites, always at the start, first entries the best
+                self.HOF.update(
+                    {fit:ind for fit, ind in zip(fits[:N], pop[:N,:])})
+            # otherwise only update if better
+            else:
+                self.HOF.update(
+                    # going until N - best case: All hall of fame replaced, worst case: none of hall of fame replaced
+                    {fit:ind for i, (fit, ind) in enumerate(zip(fits[:N], pop[:N,:]))
+                     # automatically detects min(self.HOF.keys())
+                     if fit > min(self.HOF)}) 
+                
+                to_remove = len(self.HOF) - N
+                # sorted in ascending order, lowest fitness values removed
+                _ = [self.HOF.pop(extra, None) for extra in sorted(self.HOF)[:to_remove]] if to_remove > 0 else None
+        # Output N best hall of famers
+        else:
+            # makes sure N is <= size of Hall of Fame (cant return more than is in there)
+            N = len(self.HOF) if N > len(self.HOF) else N
+            # genes, fitnesses
+            return [(self.HOF[k], k) for k in sorted(self.HOF, reverse = True)[:N]]
 
     # ------------------------------ Evaluation function(s) PART 2 ------------------------------ 
     def evaluate_fitnesses(self, population):  #CHANGED
@@ -386,6 +449,7 @@ class ClassicEA:  #CHANGED
         return g_parents, f_parents  # Unchanged
 
 
+    # NOTE changed BLX (we had it wrong??)
     # ------------------------------ Crossover/recombination function(s) ------------------------------ 
     def vectorized_blend_recombination(self, p1: np.ndarray, p2: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """
@@ -401,25 +465,16 @@ class ClassicEA:  #CHANGED
         tuple: Two offspring arrays (ch1, ch2).
         """
         # Calculate the lower and upper bounds for the blending range
-        lower_bound = np.minimum(p1, p2) - self.alpha * np.abs(p1 - p2)
-        upper_bound = np.maximum(p1, p2) + self.alpha * np.abs(p1 - p2)
-
+        beta1, beta2 = np.random.uniform(-self.alpha, 1+self.alpha, 2) 
         # Generate two offspring by sampling from the range [lower_bound, upper_bound]
-        ch1 = np.random.uniform(lower_bound, upper_bound)
-        ch2 = np.random.uniform(lower_bound, upper_bound)
+        ch1 = p1 + beta1*(p2-p1)
+        ch2 = p1 + beta2*(p2-p1)
 
         # Clip offspring to stay within the specified bounds
         ch1 = np.clip(ch1, -1, 1)
         ch2 = np.clip(ch2, -1, 1)
 
         return ch1, ch2
-    
-    def vectorized_SBX(self, p1: np.ndarray, p2: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-        """
-        Vectorized Single Binary Crossover to create 2 offspring. (self-adaptive)
-
-        """
-        pass
 
     def vectorized_crossover(self, all_parents: np.ndarray, p_crossover: float, 
                              recombination_operator: callable) -> np.ndarray:
