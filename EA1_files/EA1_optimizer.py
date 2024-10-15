@@ -64,7 +64,7 @@ class ClassicEA:  #CHANGED
         '''Initialize the EA1 class with the necessary parameters'''  #CHANGED
         # Assign hyperparameters
         self.scaling_factor = hyperparameters["scaling_factor"]
-        self.sigma_prime = hyperparameters["sigma_prime"]
+        self.sigma_prime = hyperparameters['sigma_prime']
         self.alpha = hyperparameters["alpha"]
         self.tournament_size = hyperparameters["tournament_size"]
         self.elite_fraction = hyperparameters["elite_fraction"]
@@ -82,6 +82,9 @@ class ClassicEA:  #CHANGED
         self.gene_limits = [-1.0, 1.0]  #CHANGED
         self.best_individual = None  #ADDED
         self.best_fitness = None  #ADDED
+        # XXX new multiple sigmas mutation
+        self.sigmas_primes = np.random.uniform(-1,1,self.individual_dims) 
+        
 
     def run_evolution(self):  #CHANGED
         ''' 
@@ -460,6 +463,41 @@ class ClassicEA:  #CHANGED
 
         return mutated_individual, sigma_prime
 
+    # -- XXX Updated Mutation function --
+    def vectorized_uncorrelated_mut_n_sigmas(self, individual: np.ndarray, sigmas: np.ndarray, 
+                                            mutation_rate: float) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Apply uncorrelated mutation with two step sizes [vectorized for efficiency].
+        Each gene has its own step size (sigma_i).
+        
+        Parameters:
+        individual (np.ndarray): The individual to mutate (genotype).
+        sigmas (np.ndarray): An array of mutation step sizes for each gene.
+        mutation_rate (float): The probability that each gene will mutate.
+        
+        Returns:
+        tuple: Mutated individual (np.ndarray) and the new step sizes (sigmas_prime) for each gene.
+
+        """
+        # Problem size
+        n = len(individual)
+        tau_prime =  1 / np.sqrt(2*n) # Global learning rate
+        tau = 1/np.sqrt(2*np.sqrt(n)) # Individual / gene learning rate
+        
+        # Update step_sizes for each gene
+        sigmas_primes = sigmas * np.exp(tau_prime * np.random.standard_normal()) + (tau *np.random.standard_normal(n))
+
+        # Create a mutation mask (True where mutation will be applied, False otherwise)
+        mutation_mask = np.random.uniform(0, 1, size=len(individual)) < mutation_rate
+
+        # Apply the mutation only to genes where the mask is True
+        mutations = np.random.standard_normal(size=n) * sigmas_primes # second half of equation
+        mutated_individual = np.where(mutation_mask, individual + mutations, individual)
+
+        # Correct the mutated genes to be within the genetic code bounds [-1.0, 1.0]
+        mutated_individual = np.clip(mutated_individual, -1.0, 1.0)
+
+        return mutated_individual, sigmas_primes
 
     # ------------------------------ Survivor selection function(s) ------------------------------ 
     def survivor_selection(self, parents, parent_fitnesses, 
