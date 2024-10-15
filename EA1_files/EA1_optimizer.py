@@ -83,7 +83,7 @@ class ClassicEA:  #CHANGED
         self.best_individual = None  #ADDED
         self.best_fitness = None  #ADDED
         # XXX new multiple sigmas mutation
-        self.sigmas_primes = np.random.uniform(-1,1,self.individual_dims) 
+        self.nsigma_primes = np.random.uniform(-1,1,self.individual_dims) 
         
 
     def run_evolution(self):  #CHANGED
@@ -135,14 +135,21 @@ class ClassicEA:  #CHANGED
             offspring = self.vectorized_crossover(parents, self.cr, self.vectorized_blend_recombination)  #CHANGED
 
             # Mutation
-            offspring_mutated, sigma_primes = zip(*[self.vectorized_uncorrelated_mut_one_sigma(ind, self.sigma_prime, self.mr) 
+            # offspring_mutated, sigma_primes = zip(*[self.vectorized_uncorrelated_mut_one_sigma(ind, self.sigma_prime, self.mr) 
+            #                                         for ind in offspring])  #CHANGED
+
+            # XXX New Mutation
+            # sigma_primes now nested list of np.arrays
+            offspring_mutated, nsigma_primes = zip(*[self.vectorized_uncorrelated_mut_n_sigmas(ind, self.nsigma_primes, self.mr) 
                                                     for ind in offspring])  #CHANGED
 
+            
             offspring_fitnesses = self.evaluate_fitnesses(offspring_mutated)  #CHANGED
             if all(offspring_fitnesses < 100) == False:
                 breakpoint()
             
-            self.sigma_prime = sigma_primes[np.argmax(offspring_fitnesses)]  #CHANGED
+            # XXX Updated to match multiple sigma_primes
+            self.nsigma_primes = nsigma_primes[np.argmax(offspring_fitnesses)]  #CHANGED
 
             # Survivor selection
             population, fitnesses = self.survivor_selection(parents, parent_fitnesses, list(offspring_mutated), 
