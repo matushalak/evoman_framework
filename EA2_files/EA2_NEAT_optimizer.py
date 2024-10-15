@@ -15,7 +15,7 @@ import argparse
 import pickle as pkl
 
 
-class ClassNEAT:
+class NEAT:
     def __init__(self, args, run_dir, cfg):
         self.cfg = cfg
         self.maxgen = args.maxgen
@@ -79,7 +79,7 @@ class ClassNEAT:
         parallel_evals = neat.ParallelEvaluator(multiprocessing.cpu_count(), self.eval_genome)
 
         # Run for N generations
-        pop.run(parallel_evals.evaluate, self.maxgen)
+        winner = pop.run(parallel_evals.evaluate, self.maxgen)
 
         # winner = pop.run(eval_genomes, 50) # classic
         winn_gene = stats.best_genome()
@@ -97,3 +97,5 @@ class ClassNEAT:
 
         # Display winning genome
         print('\nBest genome:\n{!s}'.format(winn_gene))
+
+        return winner.fitness

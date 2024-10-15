@@ -18,15 +18,14 @@ import optuna
 import random
 import functools
 
-from EA2_NEAT_optimizer import NEAT
-import datetime
-
 ########
 # NOTE: change the ranges of the hyperparameter search space below in the function 'objective' (this could be made more robust ofc). 
 ########
 
 
-# --------------------------------------------------------NOTE:
+# --------------------------------------------------------NOTE, BELOW THIS: NEAT ALGORTIHM 
+# - difference to EA2_neat: moved env = Environment to eval_genome() function (has to be there, else unknown!)
+#                           made run() return the final best fitness
 #                           added num_reps and num_trials, l_and_c and dbname in parser. Set a default exp_name (to easily continue a study)
 #                           added some variables to global. 
 #                           slightly changed the way of processing 'name'
@@ -38,32 +37,105 @@ def parse_args():
 
     # Define arguments
     parser.add_argument('-name', '--exp_name', type=str, required=False, default='bayes_run', help="Experiment name")
-    parser.add_argument('-dbname', '--db_name', type=str, required=False, default='DB_bayesian_neat', help="Database name")
-    parser.add_argument('-mg', '--maxgen', type=int, required=False, default = 10, help="Max generations (eg. 500)")
+    parser.add_argument('-dbname', '--db_name', type=str, required=False, default='bayesian_neat_TEST', help="Database name")
+    parser.add_argument('-mg', '--maxgen', type=int, required=False, default = 100, help="Max generations (eg. 500)")
     parser.add_argument('-nmes', '--enemies', nargs = '+', type = int, required=False, default = [5, 6], help='Provide list of enemies to train against')
     parser.add_argument('-mult', '--multi', type=str, required=False, default = 'yes', help="Single or Multienemy")
     parser.add_argument('-trials', '--num_trials', type=int, required=False, default=100, help='Number of bayesian optimization trials') 
-    parser.add_argument('-reps', '--num_reps', type=int, required=False, default=2, 
+    parser.add_argument('-reps', '--num_reps', type=int, required=False, default=3, 
                         help='Number of NEAT repititions with the same set of params') 
     parser.add_argument('-lc', '--l_and_c', type=bool, required=False, default = True, 
                         help="Loads and continues previous study if exists and set to True")
 
     return parser.parse_args()
 
-global name, num_reps, num_trials, load_and_continue, db_name, multi
+
 args = parse_args()
+global env, maxgen, name, enemies, num_reps, num_trials, load_and_continue, db_name, multi
+maxgen = args.maxgen
 name = args.exp_name  #NOTE: option 1: change the name if you do not want to continue a study
 enemies = args.enemies
 num_reps = args.num_reps
 num_trials = args.num_trials
 load_and_continue = args.l_and_c #NOTE: option 2: set to False and overwrite what was done before (in case same name and db_name)
 db_name = args.db_name #NOTE: option 3: change the database name to get a complete new database of studies
+multi  = 'yes' if args.multi == 'yes' else 'no'
 
 # add enemy names
-name = name + '_' + f'EN{str(enemies).strip('[]').replace(',', '').replace(' ', '')}' + '_' + f'reps{num_reps}' + '_' + f'mg{args.maxgen}'
+name = name + '_' + f'EN{str(enemies).strip('[]').replace(',', '').replace(' ', '')}' + '_' + f'reps{num_reps}' + '_' + f'mg{maxgen}'
 if not os.path.exists(name):
     os.makedirs(name)
 
+#NOTE: env used to be here
+
+os.environ["SDL_VIDEODRIVER"] = "dummy"
+
+def eval_genome(genome, config):
+    '''
+    Parallelized version
+    '''
+    env = Environment(experiment_name=name,
+                enemies=enemies,
+                multiplemode=multi, 
+                playermode="ai",
+                player_controller=bayesian_neat_controller(config), # you  can insert your own controller here
+                enemymode="static",
+                level=2,
+                speed="fastest",
+                visuals=False)
+    
+    net = neat.nn.FeedForwardNetwork.create(genome, config)
+    fitness ,p,e,t = env.play(pcont=net)
+    return p - e
+
+def save_stats(StatsReporter):
+    results = DataFrame({'gen':list(range(maxgen)),
+                         'best':StatsReporter.get_fitness_stat(max),
+                         'mean':StatsReporter.get_fitness_mean(),
+                         'sd':StatsReporter.get_fitness_stdev(),
+                         'med':StatsReporter.get_fitness_median(),
+                         'worst':StatsReporter.get_fitness_stat(min)})
+    results.to_csv(name + '/results.txt')
+
+def run(config_path):
+    start = time()
+
+    config = neat.Config(neat.DefaultGenome, neat.DefaultReproduction,
+							neat.DefaultSpeciesSet, neat.DefaultStagnation, config_path)
+    
+    # population
+    pop = neat.Population(config)
+
+    # Add a stdout reporter to show progress in the terminal.
+    pop.add_reporter(neat.StdOutReporter(True))
+    stats = neat.StatisticsReporter()
+    pop.add_reporter(stats)
+
+    # Run for N generations
+    # parallel
+    parallel_evals = neat.ParallelEvaluator(multiprocessing.cpu_count(), eval_genome)
+    winner = pop.run(parallel_evals.evaluate, maxgen)
+
+    # winner = pop.run(eval_genomes, 50) # classic
+    winn_gene = stats.best_genome()
+    winner_net = neat.nn.FeedForwardNetwork.create(winn_gene, config)
+
+    # save results
+    save_stats(stats)
+    # save controller
+    with open(name + '/best.pkl', 'wb') as f:
+        pkl.dump(winner_net, f)
+
+    end = time()-start
+    print(end)
+
+    # Display winning genome
+    print('\nBest genome:\n{!s}'.format(winner))
+
+    return winner.fitness
+
+
+# -------------------------------------------------------- NOTE, BELOW THIS: BAYESIAN OPTIMIZATION
 
 def mean_result_NEAT(config_path, num_reps):
 
@@ -72,8 +144,7 @@ def mean_result_NEAT(config_path, num_reps):
     avg_fitness = 0
     for i in range(num_reps):
         print(f'Starting repetition number: {i+1} out of {num_reps}')
-        Neat = NEAT(args, name, config_path)
-        fitness = Neat.run()
+        fitness = run(config_path)   
         avg_fitness += fitness
 
     avg_fitness = avg_fitness/num_reps
@@ -85,14 +156,14 @@ def make_config(p_add_connection:float,
                 p_remove_connection:float, 
                 p_add_node:float,
                 p_remove_node:float,
-                N_starting_hidden_neurons:int,
-                time:datetime.datetime):
-    os.makedirs(f'configs_{time.strftime("%d%m_%H%M%S")}', exist_ok=True)
+                N_starting_hidden_neurons:int):
+
+    os.makedirs("configs", exist_ok=True)
     # how many config files do we have already
-    n_configs = sum([1 if 'neat_config' in f else 0 for f in os.listdir(f'configs_{time.strftime("%d%m_%H%M%S")}')])    
+    n_configs = sum([1 if 'neat_config' in f else 0 for f in os.listdir('configs')])    
     
     # this will be the Nth config file
-    file_name = f'configs_{time.strftime("%d%m_%H%M%S")}/neat_config{n_configs+1}.txt'
+    file_name = f'configs/neat_config{n_configs+1}.txt'
 
     keywords = {'conn_add_prob':p_add_connection,
                 'conn_delete_prob':p_remove_connection,
@@ -120,7 +191,7 @@ def make_config(p_add_connection:float,
     return file_name
 
 
-def objective(trial, num_reps, time):
+def objective(trial, num_reps):
     
     # set the ranges for the parameters to optimize and build the trial
     #TODO: if we change the params and ranges, do we need to change the study??
@@ -135,8 +206,7 @@ def objective(trial, num_reps, time):
                     p_remove_connection, 
                     p_add_node,
                     p_remove_node,
-                    N_starting_hidden_neurons,
-                    time)
+                    N_starting_hidden_neurons)
 
     # pass the config file to mean results which runs the NEAT
     performance = mean_result_NEAT(config_path, num_reps)
@@ -146,7 +216,6 @@ def objective(trial, num_reps, time):
 
 def bayesian_optimization():
     # no arguments taken since we use global variables
-    time = datetime.datetime.now()  
 
     # create study. NOTE: sampling algorithm is set to TPE (can also be set to NSGAII, QMC, GP, etc.)
     study = optuna.create_study(sampler=optuna.samplers.TPESampler(),    
@@ -154,7 +223,7 @@ def bayesian_optimization():
                                 storage=f'sqlite:///{db_name}.db',  # Specify the storage URL here.
                                 study_name=name,
                                 load_if_exists=load_and_continue) 
-    study.optimize(lambda trial: objective(trial, num_reps, time), n_trials=num_trials)
+    study.optimize(lambda trial: objective(trial, num_reps), n_trials=num_trials)
 
     # Print best hyperparameters
     print("Best hyperparameters: ", study.best_params)

@@ -14,7 +14,7 @@ from pandas import DataFrame
 import argparse
 import pickle as pkl
 
-from NEAT_EA2_class import ClassNEAT
+from EA2_NEAT_optimizer import NEAT
 
 def parse_args():
     '''' Function enabling command-line arguments'''
@@ -53,8 +53,8 @@ def multiple_runs():
         run_dir = os.path.join(enemy_dir, f'run_{run_i}_EN{enemy_set}')
         # Run the ClassicEA for this enemy and run number
         print(f'\nRunning EA2 (neat) for enemy (set) {enemy_set}, run {run_i}\n')
-        Neat = ClassNEAT(args, run_dir, cfg)
-        Neat.run()
+        Neat = NEAT(args, run_dir, cfg)
+        fitness = Neat.run()
 
 
 
