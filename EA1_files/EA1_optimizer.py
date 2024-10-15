@@ -89,6 +89,9 @@ class ClassicEA:  #CHANGED
         self.HOF = {} # initially empty
         self.hof_size = 10
 
+        # XXX Specialists
+        self.SPECIALISTS = self.specialists(load=True)
+
     def run_evolution(self):  #CHANGED
         ''' 
         Basic evolutionary algorithm to optimize the weights 
@@ -132,13 +135,13 @@ class ClassicEA:  #CHANGED
         # XXX Bringing back: Tracking stagnation
         stagnation = 0
         how_many_HOF = 1 # start with keeping GOAT around
-
+        
         # evolution loop
         for i in range(self.max_gen):  #CHANGED
 
             # Niching (fitness sharing)
-            # shared_fitnesses = self.vectorized_fitness_sharing(fitnesses, population)  #CHANGED
-            shared_fitnesses = fitnesses # No fitness sharing
+            shared_fitnesses = self.vectorized_fitness_sharing(fitnesses, population)  #CHANGED
+            # shared_fitnesses = fitnesses # No fitness sharing
 
             # Parent selection
             parents, parent_fitnesses = self.vectorized_parent_selection(population, shared_fitnesses)  #CHANGED
@@ -195,6 +198,13 @@ class ClassicEA:  #CHANGED
                 hof_fits.append(FITNESS)
             try:
                 population[-how_many_HOF:,:], fitnesses[-how_many_HOF:] = hof_genes, hof_fits
+
+                # XXX Adding Specialist solutions
+                # 4 times
+                if i % 30 == 0:
+                    specialist_replace_indices = np.random.randint(50,len(fitnesses) - how_many_HOF,len(self.SPECIALISTS[0]))
+                    population[specialist_replace_indices,:], fitnesses[specialist_replace_indices] = self.SPECIALISTS
+
             except ValueError:
                 breakpoint()
 
@@ -280,6 +290,17 @@ class ClassicEA:  #CHANGED
             N = len(self.HOF) if N > len(self.HOF) else N
             # genes, fitnesses
             return [(self.HOF[k], k) for k in sorted(self.HOF, reverse = True)[:N]]
+        
+    def specialists(self,N = None, load = False):
+        if load == True:
+            spec_dir = 'SPECIALISTS'
+            subdirs = os.listdir(spec_dir)
+            all_specialists = np.array(
+                                [np.loadtxt(os.path.join(spec_dir, sd, file)) 
+                                for sd in subdirs for file in os.listdir(os.path.join(spec_dir, sd))]
+                                )
+            specialist_fitnesses = self.evaluate_fitnesses(all_specialists)
+        return all_specialists, specialist_fitnesses
 
     # ------------------------------ Evaluation function(s) PART 2 ------------------------------ 
     def evaluate_fitnesses(self, population):  #CHANGED
