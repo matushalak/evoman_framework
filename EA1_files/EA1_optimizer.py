@@ -413,6 +413,13 @@ class ClassicEA:  #CHANGED
         ch2 = np.clip(ch2, -1, 1)
 
         return ch1, ch2
+    
+    def vectorized_SBX(self, p1: np.ndarray, p2: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Vectorized Single Binary Crossover to create 2 offspring. (self-adaptive)
+
+        """
+        pass
 
     def vectorized_crossover(self, all_parents: np.ndarray, p_crossover: float, 
                              recombination_operator: callable) -> np.ndarray:
