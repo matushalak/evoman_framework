@@ -54,7 +54,7 @@ def objective(trial, popsize, mg, n_hidden, experiment_name,
     tournament_size = trial.suggest_int('tournament_size', 2, 15)  # Tournament selection size: from examples 7/8 seems good
     elite_fraction = trial.suggest_float('elite_fraction', 0.05, 0.5)  # Elite fraction in survivor selection: no more than 50% elitsm right?
     # XXX NEW: specialist injection frequency
-    specialist_frequency = trial.suggest_float('specialist_frequency', 5, 30)  # Elite fraction in survivor selection: no more than 50% elitsm right?
+    specialist_frequency = trial.suggest_int('specialist_frequency', 5, 30)  # Elite fraction in survivor selection: no more than 50% elitsm right?
 
     hyperparameters = {
         "scaling_factor": scaling_factor,
