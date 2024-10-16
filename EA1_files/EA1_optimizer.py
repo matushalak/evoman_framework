@@ -74,6 +74,7 @@ class ClassicEA:  #CHANGED
         self.cr = hyperparameters["crossover_rate"]
         self.popsize = hyperparameters["popsize"]
         self.max_gen = hyperparameters["max_gen"]
+        self.specialist_frequency = hyperparameters['specialist_frequency']
 
         self.n_hidden_neurons = n_hidden_neurons  #CHANGED
         self.experiment_name = experiment_name  #CHANGED
@@ -149,11 +150,10 @@ class ClassicEA:  #CHANGED
             parents, parent_fitnesses = self.vectorized_parent_selection(population, shared_fitnesses)  #CHANGED
             
             # XXX Should inject specialists here, otherwise they are discarded in parent_selection
-            # XXX Adding Specialist solutions
-            if i % 20 == 0:
-                specialist_replace_indices = np.random.randint(30,len(parent_fitnesses) - self.hof_size,len(self.SPECIALISTS[0]))
+            # XXX Adding Specialist solutions every self.specialist_frequency generations
+            if i % self.specialist_frequency == 0:
+                specialist_replace_indices = np.random.randint(0,len(parent_fitnesses),len(self.SPECIALISTS[0]))
                 parents[specialist_replace_indices,:], parent_fitnesses[specialist_replace_indices] = self.SPECIALISTS
-
 
             # Crossover / recombination: Whole Arithmetic (basic) | Blend Recombination (best)
             offspring = self.vectorized_crossover(parents, self.cr, self.vectorized_blend_recombination)  #CHANGED
@@ -248,6 +248,7 @@ class ClassicEA:  #CHANGED
             np.savetxt(self.experiment_name + '/best.txt', best_individual)  #CHANGED
             np.savetxt(self.experiment_name + '/alltime.txt', all_time[0])  #CHANGED
 
+            # XXX Was used to obtain specialists
             #if not os.path.exists('basic_solutions'):  #CHANGED
             #    os.makedirs('basic_solutions')  #CHANGED
             #np.savetxt(f'basic_solutions/{self.env.enemyn}best.txt', best_individual)  #CHANGED
@@ -306,7 +307,7 @@ class ClassicEA:  #CHANGED
             all_specialists = np.array(
                                 [np.loadtxt(os.path.join(spec_dir, sd, file)) 
                                 for sd in subdirs for file in os.listdir(os.path.join(spec_dir, sd)) 
-                                #if any(si in file for si in list(map(str, self.env.enemies)))
+                                if any(si in file for si in list(map(str, self.env.enemies)))
                                 ] # filter out hard & not useful specialists that we don't want to focus on anyways
                                 )
             specialist_fitnesses = self.evaluate_fitnesses(all_specialists)

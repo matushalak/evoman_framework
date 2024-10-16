@@ -68,7 +68,8 @@ def main():
     "mutation_rate": mr,
     "crossover_rate": cr,
     "popsize": popsize,
-    "max_gen": mg
+    "max_gen": mg,
+    'specialist_frequency':20
     }
 
     # Create the base directory if it does not exist

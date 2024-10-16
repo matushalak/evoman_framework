@@ -53,6 +53,8 @@ def objective(trial, popsize, mg, n_hidden, experiment_name,
     alpha = trial.suggest_float('alpha', 0.1, 1.0)  # Recombination factor: they say 0.5 should be optimal, I think lower is better
     tournament_size = trial.suggest_int('tournament_size', 2, 15)  # Tournament selection size: from examples 7/8 seems good
     elite_fraction = trial.suggest_float('elite_fraction', 0.05, 0.5)  # Elite fraction in survivor selection: no more than 50% elitsm right?
+    # XXX NEW: specialist injection frequency
+    specialist_frequency = trial.suggest_float('specialist_frequency', 5, 30)  # Elite fraction in survivor selection: no more than 50% elitsm right?
 
     hyperparameters = {
         "scaling_factor": scaling_factor,
@@ -63,7 +65,8 @@ def objective(trial, popsize, mg, n_hidden, experiment_name,
         "mutation_rate": mutation_rate,
         "crossover_rate": crossover_rate,
         "popsize": popsize,
-        "max_gen": mg
+        "max_gen": mg,
+        'specialist_frequency': specialist_frequency
     }
 
     # Pass the hyperparameters as arguments

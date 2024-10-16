@@ -63,7 +63,8 @@ def main():
     "mutation_rate": 0.500170314290922,
     "crossover_rate": 0.290183483321576,
     "popsize": popsize,
-    "max_gen": mg
+    "max_gen": mg,
+    'specialist_frequency' : 20
     }
 
     if fitfunc == 'new':  # Unchanged
