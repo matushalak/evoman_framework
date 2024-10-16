@@ -128,7 +128,7 @@ def objective(trial, num_reps, time):
     p_remove_connection = trial.suggest_float('p_remove_connection', 0.3, 0.7)  
     p_add_node = trial.suggest_float('p_add_node', 0.05, 0.35)  
     p_remove_node = trial.suggest_float('p_remove_node', 0.05, 0.35)  
-    N_starting_hidden_neurons = trial.suggest_int('N_starting_hidden_neurons', 5, 15)  
+    N_starting_hidden_neurons = trial.suggest_int('N_starting_hidden_neurons', 5, 25)  
 
     # make a config file with the new chosen parameters
     config_path = make_config(p_add_connection, 
