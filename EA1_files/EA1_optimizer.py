@@ -147,6 +147,13 @@ class ClassicEA:  #CHANGED
 
             # Parent selection
             parents, parent_fitnesses = self.vectorized_parent_selection(population, shared_fitnesses)  #CHANGED
+            
+            # XXX Should inject specialists here, otherwise they are discarded in parent_selection
+            # XXX Adding Specialist solutions
+            if i % 20 == 0:
+                specialist_replace_indices = np.random.randint(30,len(parent_fitnesses) - self.hof_size,len(self.SPECIALISTS[0]))
+                parents[specialist_replace_indices,:], parent_fitnesses[specialist_replace_indices] = self.SPECIALISTS
+
 
             # Crossover / recombination: Whole Arithmetic (basic) | Blend Recombination (best)
             offspring = self.vectorized_crossover(parents, self.cr, self.vectorized_blend_recombination)  #CHANGED
@@ -201,11 +208,10 @@ class ClassicEA:  #CHANGED
             try:
                 population[-how_many_HOF:,:], fitnesses[-how_many_HOF:] = hof_genes, hof_fits
 
-                # XXX Adding Specialist solutions
-                # 4 times
-                if i % 30 == 0:
-                    specialist_replace_indices = np.random.randint(50,len(fitnesses) - how_many_HOF,len(self.SPECIALISTS[0]))
-                    population[specialist_replace_indices,:], fitnesses[specialist_replace_indices] = self.SPECIALISTS
+                # # XXX Adding Specialist solutions
+                # if i % 20 == 0:
+                #     specialist_replace_indices = np.random.randint(30,len(fitnesses) - self.hof_size,len(self.SPECIALISTS[0]))
+                #     population[specialist_replace_indices,:], fitnesses[specialist_replace_indices] = self.SPECIALISTS
 
             except ValueError:
                 breakpoint()
@@ -299,9 +305,14 @@ class ClassicEA:  #CHANGED
             subdirs = os.listdir(spec_dir)
             all_specialists = np.array(
                                 [np.loadtxt(os.path.join(spec_dir, sd, file)) 
-                                for sd in subdirs for file in os.listdir(os.path.join(spec_dir, sd))]
+                                for sd in subdirs for file in os.listdir(os.path.join(spec_dir, sd)) 
+                                #if any(si in file for si in list(map(str, self.env.enemies)))
+                                ] # filter out hard & not useful specialists that we don't want to focus on anyways
                                 )
             specialist_fitnesses = self.evaluate_fitnesses(all_specialists)
+            #assert specialist_fitnesses.shape[0] == 18 # if you remove 4s and 6s should have 3 less specialists of each
+
+
         return all_specialists, specialist_fitnesses
 
     # ------------------------------ Evaluation function(s) PART 2 ------------------------------ 

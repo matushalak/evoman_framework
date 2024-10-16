@@ -23,18 +23,22 @@ def parse_args():
 
     # Define arguments
     parser.add_argument('-name', '--exp_name', type=str, required=False, help="Experiment name")
-    parser.add_argument('-mg', '--maxgen', type=int, required=False, default = 10, help="Max generations (eg. 500)")
+    parser.add_argument('-mg', '--maxgen', type=int, required=False, default = 100, help="Max generations (eg. 500)")
     parser.add_argument('-nmes', '--enemies', nargs='+', type=int, required=False, default=[5, 6], help='Provide list(s) of enemies to train against')
     parser.add_argument('-mult', '--multi', type=str, required=False, default = 'yes', help="Single or Multienemy")
-        #EA1_line_plot_runs   
+    #EA1_line_plot_runs   
     parser.add_argument('-dir', '--directory', type=str, default='1510_EA2_neat_line_plot_runs', required=False, help="Directory to save runs")
-    parser.add_argument('-nruns', '--num_runs', type=int, required=False, default=10, help="Number of repetitive neat runs")  # Unchanged
+    parser.add_argument('-nruns', '--num_runs', type=int, required=False, default=50, help="Number of repetitive neat runs")  # Unchanged
     
+    # XXX NEAT specific
+    parser.add_argument('-cfg', '--config', type=str, required=True, help="Directory with optimized config")
+    
+
     return parser.parse_args()
 
 global cfg, name, enemy_set, base_dir, num_runs, args
 args = parse_args()
-cfg = 'neat_config.txt'
+cfg = args.config
 enemy_set = args.enemies
 base_dir = args.directory
 num_runs = args.num_runs
