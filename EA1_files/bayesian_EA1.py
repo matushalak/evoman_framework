@@ -48,7 +48,7 @@ def objective(trial, popsize, mg, n_hidden, experiment_name,
     # Hyperparameter search space
     scaling_factor = trial.suggest_float('scaling_factor', 0.01, 0.25)  # Fitness sharing scaling factor: max_dist usually 15, I think going higher than 0.25 is strange
     mutation_rate = trial.suggest_float('mutation_rate', 0.01, 0.75)  # Mutation rate
-    sigma_prime = trial.suggest_float('sigma_prime', 0.01, 0.5)  # Mutation sigma: I think higher than 0.5 results in a lot of clipping
+    # sigma_prime = trial.suggest_float('sigma_prime', 0.01, 0.5)  # Mutation sigma: I think higher than 0.5 results in a lot of clipping
     crossover_rate = trial.suggest_float('crossover_rate', 0.1, 0.9)  # Crossover rate
     alpha = trial.suggest_float('alpha', 0.1, 1.0)  # Recombination factor: they say 0.5 should be optimal, I think lower is better
     tournament_size = trial.suggest_int('tournament_size', 2, 15)  # Tournament selection size: from examples 7/8 seems good
@@ -58,7 +58,7 @@ def objective(trial, popsize, mg, n_hidden, experiment_name,
 
     hyperparameters = {
         "scaling_factor": scaling_factor,
-        "sigma_prime": sigma_prime,
+        # "sigma_prime": sigma_prime,
         "alpha": alpha,
         "tournament_size": tournament_size,
         "elite_fraction": elite_fraction,

@@ -66,7 +66,7 @@ class ClassicEA:  #CHANGED
         '''Initialize the EA1 class with the necessary parameters'''  #CHANGED
         # Assign hyperparameters
         self.scaling_factor = hyperparameters["scaling_factor"]
-        self.sigma_prime = hyperparameters['sigma_prime']
+        # self.sigma_prime = hyperparameters['sigma_prime']
         self.alpha = hyperparameters["alpha"]
         self.tournament_size = hyperparameters["tournament_size"]
         self.elite_fraction = hyperparameters["elite_fraction"]

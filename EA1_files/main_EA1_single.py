@@ -56,7 +56,7 @@ def main():
 
     hyperparameters = {
     "scaling_factor": 0.236170145228546,
-    "sigma_prime": 0.321165796694383,
+    # "sigma_prime": 0.321165796694383,
     "alpha": 0.337159209115772,
     "tournament_size": 4,
     "elite_fraction": 0.361110061941829,
