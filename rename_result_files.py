@@ -20,7 +20,7 @@ def remove_spaces_from_folders():
                 # Create full path to the folder
                 old_dir_path = os.path.join(root, dir_name)
                 # Remove spaces from the folder name
-                new_dir_name = dir_name.replace(" ", "")
+                new_dir_name = dir_name.replace(" ", "").replace('[','').replace(']','').replace(",",'')
                 new_dir_path = os.path.join(root, new_dir_name)
                 # Rename the folder if necessary
                 if old_dir_path != new_dir_path:
