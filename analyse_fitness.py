@@ -24,7 +24,7 @@ from statsmodels.stats.stattools import durbin_watson
 
 
 #set manual input for enemies to evaluate (e.g., [5, 6])
-enemies_to_evaluate = [[2, 5, 7, 8], [1, 2, 3, 5, 7, 8]]
+enemies_to_evaluate = ['2578','123578']
 
 #base directories for both algorithms
 algorithm_dirs = {
@@ -58,7 +58,7 @@ def process_across_enemies(enemy_sets, algorithm_dirs, max_gen=None):
                 pass_folder = os.path.join('EA1_files', base_folder)
             elif algorithm_name == 'Neat':
                 pass_folder = os.path.join('EA2_files', base_folder)
-            df, max_best_values  = process_results_for_enemy(pass_folder, enemy_group, algorithm_name, max_gen)
+            df, max_best_values  = process_results_for_enemy_group(pass_folder, enemy_group, algorithm_name, max_gen)
             algorithm_dfs[algorithm_name] = df
             enemy_max_best_values[algorithm_name] = max_best_values
         
@@ -69,7 +69,7 @@ def process_across_enemies(enemy_sets, algorithm_dirs, max_gen=None):
     return algorithm_dfs_dict, max_best_values_dict
 
 
-def process_results_for_enemy(base_folder, enemy_group, algorithm, max_gen=None):
+def process_results_for_enemy_group(base_folder, enemy_group, algorithm, max_gen=None):
     """
     Process the results for a given enemy for one algorithm, handling different logging formats.
     """
@@ -300,6 +300,8 @@ def perform_stats_test(algorithm_dfs_dict, enemies):
         print(f"\nProcessing statistical tests for enemy {enemy}...")
 
         algorithm_dfs = algorithm_dfs_dict[str(enemy)]
+
+        #TODO: INCLUDE max_best_values_dict and do stats test on this!
 
         #initialize placeholders for the mean max fitness and mean diversity of both algorithms
         grouped_stats_mean_max_fitness_algo1 = None
