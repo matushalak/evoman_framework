@@ -347,4 +347,4 @@ if __name__ == "__main__":
     make_subplots_across_enemies(algorithm_dfs_dict, max_best_values_dict, enemies_to_evaluate, plot_titles)
 
     #step 3: perform statistical tests
-    perform_stats_test(algorithm_dfs_dict, enemies_to_evaluate)
+    perform_stats_test(algorithm_dfs_dict, enemies_to_evaluate) #TODO: also pass on and start working with max_best_values_dict here
