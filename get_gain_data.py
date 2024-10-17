@@ -5,8 +5,8 @@
 
 import sys
 
-from evoman.environment import Environment
-from demo_controller import player_controller
+from EA1_files.evoman.environment import Environment
+from EA1_files.demo_controller import player_controller
 import os
 import json
 import numpy as np
@@ -16,10 +16,10 @@ base_folder = 'gain_results'
 os.makedirs(base_folder, exist_ok=True)
 algorithms = ['EA1']#, 'EA2']
 folder_names = {
-    'EA1': 'EA1_report_results',  # Folder for EA1
+    'EA1': 'EA1_final_runs',  # Folder for EA1
     #'EA2': 'EA2_report_results'  # Folder for EA2
 }
-enemies = [5, 6, 8]
+enemies = [1, 2, 3, 4, 5, 6, 7, 8]
 n_hidden = 10
 
 
@@ -69,7 +69,8 @@ def main(base_folder,algorithms,enemies,n_hidden,folder_names):
             # Iterate through the runs (1 to 10)
             for run in range(1, 11):
                 folder_name = folder_names[algo]
-                run_folder = os.path.join(folder_name, f'EN{enemy}', f'run_{run}_EN{enemy}')
+                pass_folder = os.path.join('EA1_files', folder_name)
+                run_folder = os.path.join(pass_folder, f'EN{enemy}', f'run_{run}_EN{enemy}')
                 alltime_file = os.path.join(run_folder, 'alltime.txt')
                 
                 #check if the alltime.txt file exists
@@ -78,7 +79,17 @@ def main(base_folder,algorithms,enemies,n_hidden,folder_names):
                     gains = []
 
                     #play the game 5 times for each run
-                    for j in range(5):
+                    for j in range(9):
+                        enemy_to_play = j+1
+                        env = Environment(experiment_name=run_folder,  # Unchanged
+                                        enemies=enemy_to_play,  # Unchanged
+                                        playermode="ai",  # Unchanged
+                                        player_controller=player_controller(n_hidden),  # you can insert your own controller here # Unchanged
+                                        enemymode="static",  # Unchanged
+                                        level=2,  # Unchanged
+                                        speed="fastest",  # Unchanged
+                                        visuals=False)  # Unchanged
+
                         fitness, p, e, t = run_game(env, sol)
                         gain = p - e  # Calculate gain as p (player life) - e (enemy life)
                         gains.append(gain)
@@ -94,4 +105,4 @@ def main(base_folder,algorithms,enemies,n_hidden,folder_names):
 
 
 if __name__ == "__main__":
-    main(base_folder,algorithms,enemies,n_hidden,folder_names)
+    main(base_folder, algorithms, enemies, n_hidden, folder_names)

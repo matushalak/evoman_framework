@@ -24,17 +24,17 @@ from statsmodels.stats.stattools import durbin_watson
 
 
 #set manual input for enemies to evaluate (e.g., [5, 6])
-enemies_to_evaluate = [[2, 3],[5, 6]]
+enemies_to_evaluate = [[2, 5, 7, 8], [1, 2, 3, 5, 7, 8]]
 
 #base directories for both algorithms
 algorithm_dirs = {
-    'Classic EA': 'TEST_EA1_line_plot_runs',
-    #'Neat': 'NEAT_report_results'
+    'Classic EA': 'EA1_final_runs',
+    'Neat': 'NEAT_final_runs'
 }
 
 # Set the maximum generation up to where to want to plot and do statistical tests
-max_gen = 50 # To limit the number of generations shown in the plot
-plot_titles = ['A', 'B'] # Just for plotting aestetics  
+max_gen = 100 # To limit the number of generations shown in the plot
+plot_titles = ['A', 'B', 'C', 'D'] # Just for plotting aestetics  
 
 
 def process_across_enemies(enemy_sets, algorithm_dirs, max_gen=None):
@@ -42,24 +42,31 @@ def process_across_enemies(enemy_sets, algorithm_dirs, max_gen=None):
     Process results for all enemies and both algorithms, and generate n x 2 subplots for fitness and diversity.
     """
     algorithm_dfs_dict = {}
+    max_best_values_dict = {}  # Dictionary to hold max 'best' values for all enemies and algorithms
 
     for enemy_group in enemy_sets:
         print(f"Processing enemy {enemy_group}...")
 
         #dictionary to hold the dataframes for both algorithms
         algorithm_dfs = {}
+        enemy_max_best_values = {}  # Dictionary to hold max values for this enemy
 
         #process results for both algorithms
         for algorithm_name, base_folder in algorithm_dirs.items():
-            pass_folder = os.path.join('EA1_files', base_folder)
-            df = process_results_for_enemy(pass_folder, enemy_group, algorithm_name, max_gen)
+            # Set the appropriate pass_folder based on the algorithm
+            if algorithm_name == 'Classic EA':
+                pass_folder = os.path.join('EA1_files', base_folder)
+            elif algorithm_name == 'Neat':
+                pass_folder = os.path.join('EA2_files', base_folder)
+            df, max_best_values  = process_results_for_enemy(pass_folder, enemy_group, algorithm_name, max_gen)
             algorithm_dfs[algorithm_name] = df
+            enemy_max_best_values[algorithm_name] = max_best_values
         
         #store the results for this enemy
         algorithm_dfs_dict[str(enemy_group)] = algorithm_dfs
+        max_best_values_dict[str(enemy_group)] = enemy_max_best_values
 
-    return algorithm_dfs_dict
-
+    return algorithm_dfs_dict, max_best_values_dict
 
 
 def process_results_for_enemy(base_folder, enemy_group, algorithm, max_gen=None):
@@ -73,6 +80,7 @@ def process_results_for_enemy(base_folder, enemy_group, algorithm, max_gen=None)
         return None
 
     all_dfs = []  # Initialize an empty list to hold dataframes
+    max_best_values = {}  # Dictionary to hold max 'best' values for each run
 
     # Iterate through the run folders (e.g., run_1_ENX, run_2_ENX, etc.)
     for run_folder in os.listdir(enemy_folder):
@@ -89,16 +97,16 @@ def process_results_for_enemy(base_folder, enemy_group, algorithm, max_gen=None)
                     #drop the first duplicate generation 0 row (if it exists)
                     df = df.drop_duplicates(subset=['gen'], keep='last')
                     
-                elif algorithm == 'IM-EA':
-                    #for Algorithm 2
-                    df = pd.read_csv(result_file, delim_whitespace=True, comment='#', header=None)
-                    df.columns = ['gen', 'best', 'mean', 'std', 'diversity']  # Add column names
-                    #convert the 'gen' column to integer since it's stored as float
+                elif algorithm == 'Neat':
+                    # For Algorithm 2
+                    df = pd.read_csv(result_file, delimiter=',')  # Read the file using comma as a delimiter
+                    df.columns = ['gen', 'best', 'mean', 'std']  # Add column names
+                    # Convert the 'gen' column to integer since it's stored as float
                     df['gen'] = df['gen'].astype(int)
                     
                 # filter rows based on max generation if max_gen is set
-                if max_gen is not None:
-                    df = df[df['gen'] <= max_gen]
+                #if max_gen is not None:
+                #    df = df[df['gen'] <= max_gen]
                 # ensure valid numeric data
                 df = df[pd.to_numeric(df['best'], errors='coerce').notnull()]
 
@@ -108,27 +116,29 @@ def process_results_for_enemy(base_folder, enemy_group, algorithm, max_gen=None)
                 df['std'] = pd.to_numeric(df['std'])
                 df['gen'] = pd.to_numeric(df['gen'])
 
+                max_best = df['best'].max()
+                max_best_values[run_folder] = max_best
+
                 # Append DataFrame to the list
                 all_dfs.append(df)
 
     if all_dfs:
-        return pd.concat(all_dfs)  # Return the concatenated dataframe
-    return None
+        return pd.concat(all_dfs), max_best_values  # Return the concatenated dataframe
 
 
-def make_subplots_across_enemies(algorithm_dfs_dict, enemy_sets, plot_titles):
+def make_subplots_across_enemies(algorithm_dfs_dict, max_best_values_dict, enemy_sets, plot_titles):
     """
     Create subplots with the results for all enemy_set, with separate plots for fitness and diversity.
     """
     n_enemy_sets = len(enemy_sets)  # Number of enemy_set provided
-    fig, axes = plt.subplots(nrows=n_enemy_sets, ncols=1, figsize=(12, 18))  # Create an n x 2 grid
+    fig, axes = plt.subplots(nrows=n_enemy_sets, ncols=2, figsize=(12, 14))  # Create an n x 2 grid
 
     if n_enemy_sets == 1:
         axes = [axes]  #handle case where there's only one enemy to plot
 
     #iterate over each enemy and corresponding axes
     for i, (enemy_group, ax_pair) in enumerate(zip(enemy_sets, axes)):
-        ax_fitness = ax_pair  # Unpack the axes for fitness and diversity
+        ax_fitness, ax_max_best = ax_pair 
 
         algorithm_dfs = algorithm_dfs_dict[str(enemy_group)]
 
@@ -161,7 +171,7 @@ def make_subplots_across_enemies(algorithm_dfs_dict, enemy_sets, plot_titles):
                                         alpha=0.2)
 
         #customize the fitness plot (left)
-        ax_fitness.set_title(f'{plot_titles[i]}) Fitness evolution for enemy set {enemy_group}', fontsize=18)
+        ax_fitness.set_title(f'{plot_titles[i]}) Fitness evolution for enemy set {i+1}', fontsize=18)
         ax_fitness.set_xlabel('Generation', fontsize=16)
         ax_fitness.set_ylabel('Fitness', fontsize=16)
         ax_fitness.grid(True)
@@ -172,6 +182,26 @@ def make_subplots_across_enemies(algorithm_dfs_dict, enemy_sets, plot_titles):
         #combine legends for fitness and diversity
         fitness_lines, fitness_labels = ax_fitness.get_legend_handles_labels()
         ax_fitness.legend(fitness_lines, fitness_labels, loc='lower right', fontsize=14)
+
+        max_best_values = max_best_values_dict[str(enemy_group)]
+
+        for algorithm_name, run_values in max_best_values.items():
+            runs = list(run_values.keys())
+            max_best_values_list = list(run_values.values())
+            sorted_max_best_values_list = np.sort(max_best_values_list)
+
+            ax_max_best.plot(list(range(1, len(runs) + 1)), max_best_values_list, marker = 'o', 
+                             label=f"{algorithm_name}")
+            #ax_max_best.scatter(runs, max_best_values_list, label=f"{algorithm_name}: max best values")
+
+        # Customize the max best values plot
+        ax_max_best.set_title(f'{plot_titles[i + 2]}) Max best fitness for enemy {i+1}', fontsize=18)
+        ax_max_best.set_xlabel('Run', fontsize=16)
+        ax_max_best.set_ylabel('Max Best Fitness', fontsize=16)
+        ax_max_best.grid(True)
+
+        ax_max_best.legend(loc='upper right', fontsize=14)
+        ax_max_best.tick_params(axis='both', which='major', labelsize=12)
 
     #adjust layout to prevent overlap between subplots
     plt.tight_layout(pad=3.0)
@@ -269,30 +299,30 @@ def perform_stats_test(algorithm_dfs_dict, enemies):
     for enemy in enemies:
         print(f"\nProcessing statistical tests for enemy {enemy}...")
 
-        algorithm_dfs = algorithm_dfs_dict[enemy]
+        algorithm_dfs = algorithm_dfs_dict[str(enemy)]
 
         #initialize placeholders for the mean max fitness and mean diversity of both algorithms
         grouped_stats_mean_max_fitness_algo1 = None
         grouped_stats_mean_max_fitness_algo2 = None
-        grouped_stats_mean_diversity_algo1 = None
-        grouped_stats_mean_diversity_algo2 = None
+        #grouped_stats_mean_diversity_algo1 = None
+        #grouped_stats_mean_diversity_algo2 = None
 
         #iterate through algorithms and save the stats for both algorithms
         for algorithm_name, df in algorithm_dfs.items():
             if df is not None:
                 #group by generation and calculate mean max fitness and mean diversity
                 grouped_stats = df.groupby('gen').agg(
-                    mean_max_fitness=('best', 'mean'),
-                    mean_diversity=('diversity', 'mean')
+                    mean_max_fitness=('best', 'mean')#,
+                    #mean_diversity=('diversity', 'mean')
                 )
 
                 #store stats for the correct algorithm
                 if algorithm_name == "Classic EA":
                     grouped_stats_mean_max_fitness_algo1 = grouped_stats['mean_max_fitness'].values
-                    grouped_stats_mean_diversity_algo1 = grouped_stats['mean_diversity'].values
-                elif algorithm_name == "IM-EA":
+                    #grouped_stats_mean_diversity_algo1 = grouped_stats['mean_diversity'].values
+                elif algorithm_name == "Neat":
                     grouped_stats_mean_max_fitness_algo2 = grouped_stats['mean_max_fitness'].values
-                    grouped_stats_mean_diversity_algo2 = grouped_stats['mean_diversity'].values
+                    #grouped_stats_mean_diversity_algo2 = grouped_stats['mean_diversity'].values
 
         sum_difference_best = sum(grouped_stats_mean_max_fitness_algo1-grouped_stats_mean_max_fitness_algo2)
         print(f'\nSum of the difference between the mean best fitnesses of EA1 and EA2: ' 
@@ -303,18 +333,18 @@ def perform_stats_test(algorithm_dfs_dict, enemies):
             print(f'\nThe statistics for the mean best fitness for enemy {enemy} are:')
             p_fitness = compare_datasets(grouped_stats_mean_max_fitness_algo1, grouped_stats_mean_max_fitness_algo2)
 
-        if grouped_stats_mean_diversity_algo1 is not None and grouped_stats_mean_diversity_algo2 is not None:
-            print(f'\nThe statistics for the mean diversity for enemy {enemy} are:')
-            p_diversity = compare_datasets(grouped_stats_mean_diversity_algo1, grouped_stats_mean_diversity_algo2)
+        #if grouped_stats_mean_diversity_algo1 is not None and grouped_stats_mean_diversity_algo2 is not None:
+        #    print(f'\nThe statistics for the mean diversity for enemy {enemy} are:')
+        #    p_diversity = compare_datasets(grouped_stats_mean_diversity_algo1, grouped_stats_mean_diversity_algo2)
             
 
-# Main script
+# Main steps
 if __name__ == "__main__":
     #step 1: rocess and plot the results for the selected enemies
-    algorithm_dfs_dict = process_across_enemies(enemies_to_evaluate, algorithm_dirs, max_gen)
+    algorithm_dfs_dict, max_best_values_dict = process_across_enemies(enemies_to_evaluate, algorithm_dirs, max_gen)
 
     #step 2: enerate subplots for all enemies with separate fitness and diversity plots
-    make_subplots_across_enemies(algorithm_dfs_dict, enemies_to_evaluate, plot_titles)
+    make_subplots_across_enemies(algorithm_dfs_dict, max_best_values_dict, enemies_to_evaluate, plot_titles)
 
     #step 3: perform statistical tests
-    #perform_stats_test(algorithm_dfs_dict, enemies_to_evaluate)
+    perform_stats_test(algorithm_dfs_dict, enemies_to_evaluate)

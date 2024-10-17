@@ -12,7 +12,7 @@ from scipy import stats
 
 #set manual input:
 ALGORITHMS = ["EA1", "EA2"] #Order matters for order of plotting
-enemies = [5, 6, 8]  # List of enemies to process
+enemies = [1, 2 ,3 ,4 ,5 ,6 , 7, 8]  # List of enemies to process
 base_folder = 'gain_results'  # Folder where data is stored
 custom_legend_labels = ["Baseline EA", "IM-EA"]
 
