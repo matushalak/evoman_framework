@@ -6,9 +6,10 @@
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
-from scipy.stats import shapiro, levene, ttest_rel, wilcoxon
+from scipy.stats import shapiro, levene, ttest_rel, wilcoxon, f_oneway
 import numpy as np
 from statsmodels.stats.stattools import durbin_watson
+import seaborn as sns
 
 ##### ------------------------------------------ NOTE: --> works for Task 2 EA1 now, not for neat yet!
 #       in 'enemies_to_evaluate' the enemy sets can be selected
@@ -19,7 +20,7 @@ from statsmodels.stats.stattools import durbin_watson
 ##### ------------------------------------------ TODO: 
 #       make this process streamlined for the way (& location where) neat output is saved
 #       change line +/-52: pass_folder = os.path.join('EA1_files', base_folder) --> only for EA1, not robust
-#       find replacement for 'if algorithm == 'Classic EA':' and 'elif algorithm == 'IM-EA':'
+#       find replacement for 'if algorithm == 'Baseline EA':' and 'elif algorithm == 'IM-EA':'
 #       maybe include a parser like in the other scripts we built
 
 
@@ -28,7 +29,7 @@ enemies_to_evaluate = ['2578','123578']
 
 #base directories for both algorithms
 algorithm_dirs = {
-    'Classic EA': 'EA1_final_runs',
+    'Baseline EA': 'EA1_final_runs',
     'Neat': 'NEAT_final_runs'
 }
 
@@ -36,6 +37,8 @@ algorithm_dirs = {
 max_gen = 100 # To limit the number of generations shown in the plot
 plot_titles = ['A', 'B', 'C', 'D'] # Just for plotting aestetics  
 
+
+# ------------------------------ Data processing function(s) ------------------------------ 
 
 def process_across_enemies(enemy_sets, algorithm_dirs, max_gen=None):
     """
@@ -54,7 +57,7 @@ def process_across_enemies(enemy_sets, algorithm_dirs, max_gen=None):
         #process results for both algorithms
         for algorithm_name, base_folder in algorithm_dirs.items():
             # Set the appropriate pass_folder based on the algorithm
-            if algorithm_name == 'Classic EA':
+            if algorithm_name == 'Baseline EA':
                 pass_folder = os.path.join('EA1_files', base_folder)
             elif algorithm_name == 'Neat':
                 pass_folder = os.path.join('EA2_files', base_folder)
@@ -67,7 +70,6 @@ def process_across_enemies(enemy_sets, algorithm_dirs, max_gen=None):
         max_best_values_dict[str(enemy_group)] = enemy_max_best_values
 
     return algorithm_dfs_dict, max_best_values_dict
-
 
 def process_results_for_enemy_group(base_folder, enemy_group, algorithm, max_gen=None):
     """
@@ -91,7 +93,7 @@ def process_results_for_enemy_group(base_folder, enemy_group, algorithm, max_gen
             
             if os.path.exists(result_file):
                 #read results file
-                if algorithm == 'Classic EA':
+                if algorithm == 'Baseline EA':
                     #for Algorithm 1
                     df = pd.read_csv(result_file, delim_whitespace=True)
                     #drop the first duplicate generation 0 row (if it exists)
@@ -126,19 +128,27 @@ def process_results_for_enemy_group(base_folder, enemy_group, algorithm, max_gen
         return pd.concat(all_dfs), max_best_values  # Return the concatenated dataframe
 
 
+# ------------------------------ Plot function ------------------------------ 
+
 def make_subplots_across_enemies(algorithm_dfs_dict, max_best_values_dict, enemy_sets, plot_titles):
     """
     Create subplots with the results for all enemy_set, with separate plots for fitness and diversity.
     """
     n_enemy_sets = len(enemy_sets)  # Number of enemy_set provided
-    fig, axes = plt.subplots(nrows=n_enemy_sets, ncols=2, figsize=(12, 14))  # Create an n x 2 grid
+    fig, axes = plt.subplots(nrows=n_enemy_sets, ncols=2, figsize=(14, 14), 
+                             gridspec_kw={'width_ratios': [3, 2]})  # Create an n x 2 grid
 
     if n_enemy_sets == 1:
         axes = [axes]  #handle case where there's only one enemy to plot
 
+    colors = {
+    'Baseline EA': "#ff7f0e",
+    'Neat': "#d62728"
+    }
+
     #iterate over each enemy and corresponding axes
     for i, (enemy_group, ax_pair) in enumerate(zip(enemy_sets, axes)):
-        ax_fitness, ax_max_best = ax_pair 
+        ax_fitness, ax_violin = ax_pair 
 
         algorithm_dfs = algorithm_dfs_dict[str(enemy_group)]
 
@@ -164,7 +174,7 @@ def make_subplots_across_enemies(algorithm_dfs_dict, max_best_values_dict, enemy
 
                 #plot best fitness with standard deviation shading on fitness axis
                 ax_fitness.plot(generations, grouped_stats['mean_max_fitness'], label=f"{algorithm_name}: best fitness", 
-                                linestyle='-', linewidth=2)
+                                linestyle='-', linewidth=2)#, color=colors[algorithm_name])
                 ax_fitness.fill_between(generations,
                                         grouped_stats['mean_max_fitness'] - grouped_stats['std_max_fitness'],
                                         grouped_stats['mean_max_fitness'] + grouped_stats['std_max_fitness'],
@@ -174,6 +184,7 @@ def make_subplots_across_enemies(algorithm_dfs_dict, max_best_values_dict, enemy
         ax_fitness.set_title(f'{plot_titles[i]}) Fitness evolution for enemy set {i+1}', fontsize=18)
         ax_fitness.set_xlabel('Generation', fontsize=16)
         ax_fitness.set_ylabel('Fitness', fontsize=16)
+        ax_fitness.set_ylim(-85, 70)  # CHANGED: Set y-axis range for line plots
         ax_fitness.grid(True)
 
         ax_fitness.tick_params(axis='both', which='major', labelsize=12)  # Change '10' to your desired font size
@@ -183,31 +194,38 @@ def make_subplots_across_enemies(algorithm_dfs_dict, max_best_values_dict, enemy
         fitness_lines, fitness_labels = ax_fitness.get_legend_handles_labels()
         ax_fitness.legend(fitness_lines, fitness_labels, loc='lower right', fontsize=14)
 
+        # Prepare data for the violin plot
         max_best_values = max_best_values_dict[str(enemy_group)]
-
+        plot_data = []
         for algorithm_name, run_values in max_best_values.items():
-            runs = list(run_values.keys())
-            max_best_values_list = list(run_values.values())
-            sorted_max_best_values_list = np.sort(max_best_values_list)
+            for run, max_best_value in run_values.items():
+                plot_data.append({
+                    'Algorithm': algorithm_name,
+                    'Max_Best_Value': max_best_value
+                })
 
-            ax_max_best.plot(list(range(1, len(runs) + 1)), max_best_values_list, marker = 'o', 
-                             label=f"{algorithm_name}")
-            #ax_max_best.scatter(runs, max_best_values_list, label=f"{algorithm_name}: max best values")
+        plot_df = pd.DataFrame(plot_data)
 
-        # Customize the max best values plot
-        ax_max_best.set_title(f'{plot_titles[i + 2]}) Max best fitness for enemy {i+1}', fontsize=18)
-        ax_max_best.set_xlabel('Run', fontsize=16)
-        ax_max_best.set_ylabel('Max Best Fitness', fontsize=16)
-        ax_max_best.grid(True)
+        # Plot violin distribution of max_best_values on the right axis
+        sns.violinplot(ax=ax_violin, x='Algorithm', y='Max_Best_Value', data=plot_df, split=True, 
+                       inner='quartile', palette=["#ff7f0e", "#d62728"])  # CHANGED: Replaced line plot with violin plot
 
-        ax_max_best.legend(loc='upper right', fontsize=14)
-        ax_max_best.tick_params(axis='both', which='major', labelsize=12)
+        # Customize the violin plot
+        ax_violin.set_title(f'{plot_titles[i + 2]}) Best fitness dist. for enemy set {i+1}', fontsize=18)  # CHANGED: Adjusted title for violin plot
+        ax_violin.set_xlabel('Algorithm', fontsize=16)
+        ax_violin.set_ylabel('Best Fitness', fontsize=16)
+        ax_violin.set_ylim(0, 90)  # CHANGED: Set y-axis range for violin plots
+        ax_violin.grid(True)
+
+        ax_violin.tick_params(axis='both', which='major', labelsize=12)
 
     #adjust layout to prevent overlap between subplots
     plt.tight_layout(pad=3.0)
     plt.savefig('line_plots.png')  # Uncomment to save the figure
     plt.show()
 
+
+# ------------------------------ Stats test function(s) PART 1 ------------------------------ 
 
 def test_normality(data):
     """
@@ -251,9 +269,41 @@ def test_equal_variance(data1, data2):
     """
     stat, p_value = levene(data1, data2)
     print(f"Levene's Test Statistic: {stat}, P-value: {p_value}")
+
     return p_value
 
-def compare_datasets(data1, data2):
+def levene_test(data1, data2):
+    """
+    Test if two datasets have equal variances using Levene's test.
+    
+    Parameters:
+    The two datasets to test.
+    
+    Returns:
+    The p-value of Levene's test.
+    """
+    stat, p_value = levene(data1, data2)
+    print(f"Levene's Test Statistic: {stat}, P-value: {p_value}")
+    return p_value
+
+def f_test(data1, data2):
+    """
+    Test if two datasets have equal variances using F-test.
+    
+    Parameters:
+    The two datasets to test.
+    
+    Returns:
+    The p-value of F-test test.
+    """
+    f_stat, p_value = f_oneway(data1, data2)
+    print(f"F-test Statistic: {f_stat}, P-value: {p_value}")
+    return p_value
+
+
+# ------------------------------ Stats test function(s) PART 2 ------------------------------ 
+
+def compare_datasets_line_plot(data1, data2):
     """
     Compare two datasets using t-test or Wilcoxon Signed-Rank Test based on normality, autocorrelation, and equal variance.
     
@@ -291,8 +341,36 @@ def compare_datasets(data1, data2):
         stat, p_value = wilcoxon(data1, data2)
         print(f"Wilcoxon Signed-Rank Test used. Test statistic: {stat}, P-value: {p_value}")
         return "Wilcoxon Signed-Rank Test", p_value
+    
+def compare_datasets_max_best(data1, data2):
+    """
+    Compare the variance two datasets using F-test or Levene test based on normality.
+    
+    Parameters:
+    The two datasets to compare
+    
+    Returns:
+    The test used and the p-value.
+    """
+    # Test for normality
+    p_value_normal1 = test_normality(data1)
+    p_value_normal2 = test_normality(data2)
+    
+    # Decide on the test to use
+    if p_value_normal1 > 0.05 and p_value_normal2 > 0.05:
+        # Normal: F-test
+        p_value = f_test(data1, data2)
+        print(f"F-test used for max best. P-value: {p_value}")
+        return "F-test", p_value
+    else:
+        # Non-normal: Levene test
+        p_value = levene_test(data1, data2)
+        print(f"Levene Test used for max best. P-value: {p_value}")
+        return "Levene Test", p_value
 
-def perform_stats_test(algorithm_dfs_dict, enemies):
+# ------------------------------ Stats test function(s) PART 3 ------------------------------ 
+
+def perform_stats_test(algorithm_dfs_dict, max_best_values_dict, enemies):
     """
     Perform statistical tests on the mean best fitness and mean diversity for each enemy.
     """
@@ -300,31 +378,27 @@ def perform_stats_test(algorithm_dfs_dict, enemies):
         print(f"\nProcessing statistical tests for enemy {enemy}...")
 
         algorithm_dfs = algorithm_dfs_dict[str(enemy)]
+        max_best_values = max_best_values_dict[str(enemy)]
 
         #TODO: INCLUDE max_best_values_dict and do stats test on this!
 
         #initialize placeholders for the mean max fitness and mean diversity of both algorithms
         grouped_stats_mean_max_fitness_algo1 = None
         grouped_stats_mean_max_fitness_algo2 = None
-        #grouped_stats_mean_diversity_algo1 = None
-        #grouped_stats_mean_diversity_algo2 = None
 
         #iterate through algorithms and save the stats for both algorithms
         for algorithm_name, df in algorithm_dfs.items():
             if df is not None:
                 #group by generation and calculate mean max fitness and mean diversity
                 grouped_stats = df.groupby('gen').agg(
-                    mean_max_fitness=('best', 'mean')#,
-                    #mean_diversity=('diversity', 'mean')
+                    mean_max_fitness=('best', 'mean')
                 )
 
                 #store stats for the correct algorithm
-                if algorithm_name == "Classic EA":
+                if algorithm_name == "Baseline EA":
                     grouped_stats_mean_max_fitness_algo1 = grouped_stats['mean_max_fitness'].values
-                    #grouped_stats_mean_diversity_algo1 = grouped_stats['mean_diversity'].values
                 elif algorithm_name == "Neat":
                     grouped_stats_mean_max_fitness_algo2 = grouped_stats['mean_max_fitness'].values
-                    #grouped_stats_mean_diversity_algo2 = grouped_stats['mean_diversity'].values
 
         sum_difference_best = sum(grouped_stats_mean_max_fitness_algo1-grouped_stats_mean_max_fitness_algo2)
         print(f'\nSum of the difference between the mean best fitnesses of EA1 and EA2: ' 
@@ -332,12 +406,24 @@ def perform_stats_test(algorithm_dfs_dict, enemies):
 
         #ensure both algorithms' stats are available before running the comparison
         if grouped_stats_mean_max_fitness_algo1 is not None and grouped_stats_mean_max_fitness_algo2 is not None:
-            print(f'\nThe statistics for the mean best fitness for enemy {enemy} are:')
-            p_fitness = compare_datasets(grouped_stats_mean_max_fitness_algo1, grouped_stats_mean_max_fitness_algo2)
+            print(f'\nThe statistics for the mean best fitness for enemy set {enemy} are:')
+            p_fitness = compare_datasets_line_plot(grouped_stats_mean_max_fitness_algo1, grouped_stats_mean_max_fitness_algo2)
 
-        #if grouped_stats_mean_diversity_algo1 is not None and grouped_stats_mean_diversity_algo2 is not None:
-        #    print(f'\nThe statistics for the mean diversity for enemy {enemy} are:')
-        #    p_diversity = compare_datasets(grouped_stats_mean_diversity_algo1, grouped_stats_mean_diversity_algo2)
+                # Initialize placeholders for the max best values of both algorithms
+        max_best_values_algo1 = []
+        max_best_values_algo2 = []
+
+        # Collect max best values from max_best_values_dict
+        for algorithm_name, run_values in max_best_values.items():
+            if algorithm_name == "Baseline EA":
+                max_best_values_algo1 = list(run_values.values())
+            elif algorithm_name == "Neat":
+                max_best_values_algo2 = list(run_values.values())
+
+        # Perform the comparison for max best values (violin plots)
+        if max_best_values_algo1 and max_best_values_algo2:
+            print(f'\nThe statistics for the max best values for enemy set {enemy} are:')
+            compare_datasets_max_best(max_best_values_algo1, max_best_values_algo2)
             
 
 # Main steps
@@ -349,4 +435,4 @@ if __name__ == "__main__":
     make_subplots_across_enemies(algorithm_dfs_dict, max_best_values_dict, enemies_to_evaluate, plot_titles)
 
     #step 3: perform statistical tests
-    perform_stats_test(algorithm_dfs_dict, enemies_to_evaluate) #TODO: also pass on and start working with max_best_values_dict here
+    perform_stats_test(algorithm_dfs_dict, max_best_values_dict, enemies_to_evaluate) 

@@ -99,15 +99,28 @@ def gather_data(base_folder, algorithms, enemy_sets):
 def generate_boxplots(df, legend_labels=None):  #CHANGED: Removed p_values and enemies parameters, adjusted to new format
     plt.figure(figsize=(10, 6))  #UNCHANGED
 
-    # Create a new column to combine Algorithm and EnemySet for the x-axis
-    df['Algorithm_EnemySet'] = df['Algorithm'] + ' (Enemy set ' + df['EnemySet'] + ')'  #CHANGED: New column for grouping by Algorithm and EnemySet
+    # Map the enemy set values to shorter labels
+    enemy_set_mapping = {
+        '2578': '1',
+        '123578': '2'
+    }
 
-    # customize colors
-    palette = {"EA1 (Enemy set 2578)": "royalblue", 
-               "EA2 (Enemy set 2578)": "royalblue", 
-               "EA1 (Enemy set 123578)": "lightblue",
-               "EA2 (Enemy set 123578)": "lightblue",}  #UNCHANGED
+    # Apply the mapping to df['EnemySet'] to convert to set numbers
+    df['EnemySet'] = df['EnemySet'].replace(enemy_set_mapping)
 
+    # Map the algorithm names to more readable labels, and combine with enemy set info for the x-axis
+    df['Algorithm_EnemySet'] = df['Algorithm'].replace({
+        'EA1': 'Baseline EA',
+        'EA2': 'Neat'
+    }) + ' (set ' + df['EnemySet'] + ')'
+
+    # Customize colors
+    palette = {
+        "Baseline EA (set 1)": "lightgreen",
+        "Neat (set 1)": "lightgreen",
+        "Baseline EA (set 2)": "lightblue",
+        "Neat (set 2)": "lightblue"
+    }
     # create the box plot with customized palette
     ax = sns.boxplot(x='Algorithm_EnemySet', y='Gain', data=df, palette=palette, width=0.6)  #CHANGED: Updated x-axis to be Algorithm_EnemySet
 
@@ -115,15 +128,24 @@ def generate_boxplots(df, legend_labels=None):  #CHANGED: Removed p_values and e
     sns.despine(ax=ax, top=True, right=True)  #UNCHANGED
 
     # set the labels
-    ax.set_xlabel('Evolutionary Algorithms', fontsize=16)  #CHANGED: Updated x-axis label
-    ax.set_ylabel('Individual Gain', fontsize=16)  #UNCHANGED
+    ax.set_xlabel('Evolutionary Algorithms', fontsize=16, labelpad=20)  #CHANGED: Updated x-axis label
+    ax.set_ylabel('Gain', fontsize=16)  #UNCHANGED
 
     # Set custom legend labels if provided
     if legend_labels is not None:  #UNCHANGED
         handles, _ = ax.get_legend_handles_labels()  #UNCHANGED
-        ax.legend(handles, legend_labels, loc='lower right', fontsize=12)  #UNCHANGED
+        ax.legend(handles, legend_labels, loc='lower right', fontsize=14)  #UNCHANGED
     else:  #UNCHANGED
-        ax.legend(loc='lower right', fontsize=12)  #UNCHANGED
+        ax.legend(loc='lower right', fontsize=14)  #UNCHANGED
+
+        # Add a custom legend for the enemy sets
+    custom_legend = [
+        plt.Line2D([0], [0], color="lightgreen", lw=4, label='Enemy set 1'),
+        plt.Line2D([0], [0], color="lightblue", lw=4, label='Enemy set 2')
+    ]
+    plt.legend(handles=custom_legend, loc='upper right', fontsize=12)
+    plt.tick_params(axis='both', which='major', labelsize=14)
+
 
     plt.tight_layout()  #UNCHANGED
     plt.savefig('box_plot.png')  # Uncomment to save the figure  #UNCHANGED
@@ -140,7 +162,7 @@ def perform_statistical_tests(df, enemy_sets, algorithms):
         #perform t-test (or you can use Mann-Whitney U test if needed)
         t_stat, p_value = stats.ttest_ind(algo1_gains, algo2_gains)
         
-        print(f"Enemy Set {enemy_set} - T-test between {algorithms[0]} and {algorithms[1]}: t-stat={t_stat:.4f}, p-value={p_value:.4f}")
+        print(f"Enemy Set {enemy_set} - T-test between {algorithms[0]} and {algorithms[1]}: t-stat={t_stat:.4f}, p-value={p_value:.16f}")
         p_values.append(p_value)
 
     return p_values
