@@ -48,3 +48,4 @@ The following scripts are available for analysis:
 ## Folder structure
 - `EA1_files`: contains results & all files for EA1 (Baseline EA).
 - `EA2_files`: contains results & all files for EA2 (NEAT).
+- `figures`: contains all figures used in the Task 2 Report
