@@ -215,7 +215,8 @@ def generate_violinplot_num_beaten(df):
 
 def perform_statistical_tests(df, enemy_sets, algorithms):
 
-    p_values = []
+    p_values1 = []
+    p_values2 = []
     for enemy_set in enemy_sets:
         algo1_gains = df[(df['EnemySet'] == enemy_set) & (df['Algorithm'] == algorithms[0])]['Gain']
         algo2_gains = df[(df['EnemySet'] == enemy_set) & (df['Algorithm'] == algorithms[1])]['Gain']
@@ -224,9 +225,20 @@ def perform_statistical_tests(df, enemy_sets, algorithms):
         t_stat, p_value = stats.ttest_ind(algo1_gains, algo2_gains)
         
         print(f"Enemy Set {enemy_set} - T-test between {algorithms[0]} and {algorithms[1]}: t-stat={t_stat:.4f}, p-value={p_value:.16f}")
-        p_values.append(p_value)
+        p_values1.append(p_value)
 
-    return p_values
+    for algo in algorithms:
+        algo1_gains2 = df[(df['EnemySet'] == enemy_sets[0]) & (df['Algorithm'] == algo)]['Gain']
+        algo2_gains2 = df[(df['EnemySet'] == enemy_sets[1]) & (df['Algorithm'] == algo)]['Gain']
+        
+        #perform t-test (or you can use Mann-Whitney U test if needed)
+        t_stat2, p_value2 = stats.ttest_ind(algo1_gains2, algo2_gains2)
+        
+        print(f"Algorithm {algo} - T-test between {enemy_sets[0]} and {enemy_sets[1]}: t-stat={t_stat2:.4f}, p-value={p_value2:.16f}")
+        p_values2.append(p_value2)
+
+    return p_values1, p_values2
+
 
 # Function to calculate and print median gain
 def print_median_gains(df, algorithms, enemy_sets):
@@ -256,4 +268,5 @@ if __name__ == "__main__":
 
     # Step 5: Generate violin plots for the number of enemies beaten
     generate_violinplot_num_beaten(df_num_beaten)
+
 
