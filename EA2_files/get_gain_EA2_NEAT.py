@@ -19,7 +19,7 @@ algorithms = ['EA2']#, 'EA2']
 folder_names = {
     'EA2': 'NEAT_final_runs',  # Folder for EA1
 }
-config = [f'configs_1610_010734/neat_config1.txt', 
+config = [f'configs_1610_010734/neat_config13.txt', 
           f'configs_1610_010734/neat_config2.txt']
 enemies = [1, 2, 3, 4, 5, 6, 7, 8]  
 enemy_sets = ['2578','123578']

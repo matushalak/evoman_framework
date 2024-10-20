@@ -17,7 +17,7 @@ import argparse
 from joblib import Parallel, delayed
 from pandas import read_csv
 
-from EA1_optimizer import ClassicEA  # ADDED
+from EA1_optimizer import ClassicEA  
 
 def parse_args():
     '''' Function enabling command-line arguments'''
@@ -25,19 +25,16 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Optimize weights of Controller NN using EA")
 
     # Define arguments
-    parser.add_argument('-name', '--exp_name', type=str, required=False, help="Experiment name")  # Unchanged
-    parser.add_argument('-pop', '--popsize', type=int, required=False, default=150, help="Population size (eg. 100)")  # Unchanged
-    parser.add_argument('-mg', '--maxgen', type=int, required=False, default=5, help="Max generations (eg. 500)")  # Unchanged
-    parser.add_argument('-cr', '--crossover_rate', type=float, required=False, default=0.85, help="Crossover rate (e.g., 0.8)")  # Unchanged
-    parser.add_argument('-mr', '--mutation_rate', type=float, required=False, default=0.25, help="Mutation rate (e.g., 0.05)")  # Unchanged
-    parser.add_argument('-nh', '--nhidden', type=int, required=False, default=10, help="Number of Hidden Neurons (eg. 10)")  # Unchanged
-    parser.add_argument('-tst', '--test', type=bool, required=False, default=False, help="Train or Test (default = Train)")  # Unchanged
-    parser.add_argument('-mult', '--multi', type=str, required=False, default='yes', help="Single or Multienemy")  # Unchanged
-    parser.add_argument('-fit', '--fitness_func', type=str, required=False, default='old', help='Which Fitness function to use? [old / new]')  # Unchanged
-    parser.add_argument('-nmes', '--enemies', nargs='+', type=int, required=False, default=False, help='Provide list(s) of enemies to train against')  # Unchanged
-    #EA1_line_plot_runs     
-    parser.add_argument('-dir', '--directory', type=str, default='NEW_TEST_EA1_line_plot_runs', required=False, help="Directory to save runs")
-    parser.add_argument('-nruns', '--num_runs', type=int, required=False, default=100, help="Number of repetitive ClassicEA runs")  # Unchanged
+    parser.add_argument('-name', '--exp_name', type=str, required=False, help="Experiment name")  
+    parser.add_argument('-pop', '--popsize', type=int, required=False, default=150, help="Population size (eg. 100)")  
+    parser.add_argument('-mg', '--maxgen', type=int, required=False, default=100, help="Max generations (eg. 500)")  
+    parser.add_argument('-nh', '--nhidden', type=int, required=False, default=10, help="Number of Hidden Neurons (eg. 10)")  
+    parser.add_argument('-tst', '--test', type=bool, required=False, default=False, help="Train or Test (default = Train)")  
+    parser.add_argument('-mult', '--multi', type=str, required=False, default='yes', help="Single or Multienemy")  
+    parser.add_argument('-fit', '--fitness_func', type=str, required=False, default='old', help='Which Fitness function to use? [old / new]')  
+    parser.add_argument('-nmes', '--enemies', nargs='+', type=int, required=False, default=False, help='Provide list(s) of enemies to train against')  
+    parser.add_argument('-dir', '--directory', type=str, default='EA1_line_plot_runs', required=False, help="Directory to save runs")
+    parser.add_argument('-nruns', '--num_runs', type=int, required=False, default=100, help="Number of repetitive ClassicEA runs")  
 
     return parser.parse_args()
 
@@ -46,16 +43,14 @@ def main():
     '''Main function for basic EA, runs the EA for multiple enemies'''
     
     # command line arguments for experiment parameters
-    args = parse_args()  # Unchanged
-    popsize = args.popsize  # Unchanged
-    mg = args.maxgen  # Unchanged
-    cr = args.crossover_rate  # Unchanged
-    mr = args.mutation_rate  # Unchanged
-    n_hidden = args.nhidden  # Unchanged
-    enemies = args.enemies  # Unchanged
-    global multi, fitfunc  # Unchanged
-    multi = 'yes' if args.multi == 'yes' else 'no'  # Unchanged
-    fitfunc = args.fitness_func  # Unchanged
+    args = parse_args()  
+    popsize = args.popsize  
+    mg = args.maxgen  
+    n_hidden = args.nhidden  
+    enemies = args.enemies  
+    global multi, fitfunc  
+    multi = 'yes' if args.multi == 'yes' else 'no'  
+    fitfunc = args.fitness_func  
     base_dir = args.directory
     num_runs = args.num_runs
 
@@ -96,7 +91,7 @@ def main():
 
         env = Environment(experiment_name=run_dir,
                     enemies=enemies,
-                    multiplemode=multi,  # Unchanged
+                    multiplemode=multi,  
                     playermode="ai",
                     player_controller=player_controller(n_hidden),
                     enemymode="static",
@@ -109,8 +104,8 @@ def main():
 
         # Run the ClassicEA for this enemy and run number
         print(f'\nRunning EA1 (classis) for enemy (set) {enemies}, run {run}\n')
-        ea = ClassicEA(hyperparameters, n_hidden, run_dir, env)  # ADDED
-        final_fitness = ea.run_evolution()  # ADDED
+        ea = ClassicEA(hyperparameters, n_hidden, run_dir, env)  
+        final_fitness = ea.run_evolution()  
 
 
 if __name__ == '__main__':

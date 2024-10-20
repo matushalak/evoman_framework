@@ -11,17 +11,9 @@ import numpy as np
 from statsmodels.stats.stattools import durbin_watson
 import seaborn as sns
 
-##### ------------------------------------------ NOTE: --> works for Task 2 EA1 now, not for neat yet!
+##### ------------------------------------------ NOTE:
 #       in 'enemies_to_evaluate' the enemy sets can be selected
 #       in 'algorithm_dirs' the root folder name (where the multiple runs are saved) should be set
-#       'max_gen' can be set to any number upto the number op gens that where used to get the data 
-
-
-##### ------------------------------------------ TODO: 
-#       make this process streamlined for the way (& location where) neat output is saved
-#       change line +/-52: pass_folder = os.path.join('EA1_files', base_folder) --> only for EA1, not robust
-#       find replacement for 'if algorithm == 'Baseline EA':' and 'elif algorithm == 'IM-EA':'
-#       maybe include a parser like in the other scripts we built
 
 
 #set manual input for enemies to evaluate (e.g., [5, 6])
@@ -33,8 +25,7 @@ algorithm_dirs = {
     'Neat': 'NEAT_final_runs'
 }
 
-# Set the maximum generation up to where to want to plot and do statistical tests
-max_gen = 100 # To limit the number of generations shown in the plot
+max_gen = None #Don't use this.
 plot_titles = ['A', 'B', 'C', 'D'] # Just for plotting aestetics  
 
 
@@ -184,10 +175,10 @@ def make_subplots_across_enemies(algorithm_dfs_dict, max_best_values_dict, enemy
         ax_fitness.set_title(f'{plot_titles[i]}) Fitness evolution for enemy set {i+1}', fontsize=18)
         ax_fitness.set_xlabel('Generation', fontsize=16)
         ax_fitness.set_ylabel('Fitness', fontsize=16)
-        ax_fitness.set_ylim(-85, 70)  # CHANGED: Set y-axis range for line plots
+        ax_fitness.set_ylim(-85, 70) 
         ax_fitness.grid(True)
 
-        ax_fitness.tick_params(axis='both', which='major', labelsize=12)  # Change '10' to your desired font size
+        ax_fitness.tick_params(axis='both', which='major', labelsize=12) 
 
 
         #combine legends for fitness and diversity
@@ -208,13 +199,13 @@ def make_subplots_across_enemies(algorithm_dfs_dict, max_best_values_dict, enemy
 
         # Plot violin distribution of max_best_values on the right axis
         sns.violinplot(ax=ax_violin, x='Algorithm', y='Max_Best_Value', data=plot_df, split=True, 
-                       inner='quartile', palette=["#ff7f0e", "#d62728"])  # CHANGED: Replaced line plot with violin plot
+                       inner='quartile', palette=["#ff7f0e", "#d62728"]) 
 
         # Customize the violin plot
-        ax_violin.set_title(f'{plot_titles[i + 2]}) Best fitness dist. for enemy set {i+1}', fontsize=18)  # CHANGED: Adjusted title for violin plot
+        ax_violin.set_title(f'{plot_titles[i + 2]}) Best fitness dist. for enemy set {i+1}', fontsize=18)  
         ax_violin.set_xlabel('Algorithm', fontsize=16)
         ax_violin.set_ylabel('Best Fitness', fontsize=16)
-        ax_violin.set_ylim(0, 90)  # CHANGED: Set y-axis range for violin plots
+        ax_violin.set_ylim(0, 90)  
         ax_violin.grid(True)
 
         ax_violin.tick_params(axis='both', which='major', labelsize=12)
@@ -380,37 +371,37 @@ def perform_stats_test(algorithm_dfs_dict, max_best_values_dict, enemies):
         algorithm_dfs = algorithm_dfs_dict[str(enemy)]
         max_best_values = max_best_values_dict[str(enemy)]
 
-        # Initialize placeholders for the mean max fitness and diversity of both algorithms
+        #Initialize placeholders for the mean max fitness and diversity of both algorithms
         grouped_stats_mean_max_fitness_algo1 = None
         grouped_stats_mean_max_fitness_algo2 = None
 
-        # Iterate through algorithms and save the stats for both algorithms
+        #Iterate through algorithms and save the stats for both algorithms
         for algorithm_name, df in algorithm_dfs.items():
             if df is not None:
-                # Group by generation and calculate mean max fitness
+                #Group by generation and calculate mean max fitness
                 grouped_stats = df.groupby('gen').agg(
                     mean_max_fitness=('best', 'mean')
                 )
 
-                # Store stats for the correct algorithm
+                #Store stats for the correct algorithm
                 if algorithm_name == "Baseline EA":
                     grouped_stats_mean_max_fitness_algo1 = grouped_stats['mean_max_fitness'].values
                 elif algorithm_name == "Neat":
                     grouped_stats_mean_max_fitness_algo2 = grouped_stats['mean_max_fitness'].values
 
-        # Perform Wilcoxon test to compare mean best fitness between EA1 and NEAT for the enemy set
+        #Perform Wilcoxon test to compare mean best fitness between EA1 and NEAT for the enemy set
         if grouped_stats_mean_max_fitness_algo1 is not None and grouped_stats_mean_max_fitness_algo2 is not None:
             print(f'\nPerforming statistical tests for mean best fitness for enemy set {enemy}...')
             test_result, p_value = compare_datasets_line_plot(grouped_stats_mean_max_fitness_algo1, grouped_stats_mean_max_fitness_algo2)
 
-            # ADDED: Compare mean best fitness between algorithms in the final generation (generation 100)
+            #Compare mean best fitness between algorithms in the final generation (generation 100)
             print("\nComparing the final generation's best fitness values:")
             final_gen_fitness_algo1 = grouped_stats_mean_max_fitness_algo1[-1]
             final_gen_fitness_algo2 = grouped_stats_mean_max_fitness_algo2[-1]
             final_test_result, final_p_value = wilcoxon([final_gen_fitness_algo1], [final_gen_fitness_algo2])
             print(f"Wilcoxon Test on final generation: Test statistic = {final_test_result}, P-value = {final_p_value}")
 
-        # Collect max best values for both algorithms
+        #Collect max best values for both algorithms
         max_best_values_algo1 = []
         max_best_values_algo2 = []
 
@@ -425,24 +416,24 @@ def perform_stats_test(algorithm_dfs_dict, max_best_values_dict, enemies):
             print(f'\nPerforming statistical tests for max best values for enemy set {enemy}...')
             compare_datasets_max_best(max_best_values_algo1, max_best_values_algo2)
 
-            # ADDED: Report variances for enemy set 2 explicitly
+            #Report variances for enemy set 2 explicitly
             if str(enemy) == '123578':
                 variance_algo1 = np.var(max_best_values_algo1)
                 variance_algo2 = np.var(max_best_values_algo2)
                 print(f"\nVariance for Enemy Set 2 - Baseline EA: {variance_algo1:.4f}")
                 print(f"Variance for Enemy Set 2 - Neat: {variance_algo2:.4f}")
 
-            # ADDED: Perform Wilcoxon tests between EA1 and NEAT for Enemy Set 2
+            #erform Wilcoxon tests between EA1 and NEAT for Enemy Set 2
             if str(enemy) == '123578':
                 test_result, p_value = wilcoxon(max_best_values_algo1, max_best_values_algo2)
                 print(f"\nWilcoxon Test for Enemy Set 2 - Baseline EA vs Neat: Test statistic = {test_result}, P-value = {p_value}")
 
-            # ADDED: Perform Wilcoxon tests between EA1 and NEAT for Enemy Set 1
+            #Perform Wilcoxon tests between EA1 and NEAT for Enemy Set 1
             elif str(enemy) == '2578':
                 test_result, p_value = wilcoxon(max_best_values_algo1, max_best_values_algo2)
                 print(f"\nWilcoxon Test for Enemy Set 1 - Baseline EA vs Neat: Test statistic = {test_result}, P-value = {p_value}")
 
-            # ADDED: Compare the generalizability (gain values) between Enemy Set 1 and Enemy Set 2
+            #Compare the generalizability (gain values) between Enemy Set 1 and Enemy Set 2
             print(f"\nPerforming Wilcoxon tests for generalizability of gains between enemy sets for Baseline EA and NEAT...")
             test_result_1, p_value_1 = wilcoxon(max_best_values_algo1, max_best_values_algo2)
             print(f"Wilcoxon Test for Baseline EA Enemy Set 1 vs. Enemy Set 2: Test statistic = {test_result_1}, P-value = {p_value_1}")
