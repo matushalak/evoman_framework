@@ -178,12 +178,12 @@ def make_subplots_across_enemies(algorithm_dfs_dict, max_best_values_dict, enemy
         ax_fitness.set_ylim(-85, 70) 
         ax_fitness.grid(True)
 
-        ax_fitness.tick_params(axis='both', which='major', labelsize=12) 
+        ax_fitness.tick_params(axis='both', which='major', labelsize=16) 
 
 
         #combine legends for fitness and diversity
         fitness_lines, fitness_labels = ax_fitness.get_legend_handles_labels()
-        ax_fitness.legend(fitness_lines, fitness_labels, loc='lower right', fontsize=14)
+        ax_fitness.legend(fitness_lines, fitness_labels, loc='lower right', fontsize=16)
 
         # Prepare data for the violin plot
         max_best_values = max_best_values_dict[str(enemy_group)]
@@ -208,7 +208,7 @@ def make_subplots_across_enemies(algorithm_dfs_dict, max_best_values_dict, enemy
         ax_violin.set_ylim(0, 90)  
         ax_violin.grid(True)
 
-        ax_violin.tick_params(axis='both', which='major', labelsize=12)
+        ax_violin.tick_params(axis='both', which='major', labelsize=16)
 
     #adjust layout to prevent overlap between subplots
     plt.tight_layout(pad=3.0)
