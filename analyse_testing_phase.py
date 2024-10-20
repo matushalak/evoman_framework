@@ -10,17 +10,12 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy import stats
 
-# set manual input:  #UNCHANGED
-ALGORITHMS = ["EA1", "EA2"]  # Order matters for order of plotting  #UNCHANGED
+# set manual input:  
+ALGORITHMS = ["EA1", "EA2"]  # Order matters for order of plotting  
 enemy_sets = ['2578', '123578']  # List of enemy sets to process (note: using strings for simplicity) #CHANGED
-base_folder = 'gain_res'  # Folder where data is stored  #UNCHANGED
-custom_legend_labels = ["EA1", "EA2"]  #UNCHANGED
+base_folder = 'gain_res'  # Folder where data is stored  
+custom_legend_labels = ["EA1", "EA2"]  
 
-# New base folder for number beaten results
-num_beaten_base_folder = {
-    'EA1': 'EA1_files/num_beaten_res_EA1',
-    'EA2': 'EA2_files/num_beaten_res_EA2'
-}
 
 def read_gains(file_path):
 
@@ -51,26 +46,8 @@ def gather_data(base_folder, algorithms, enemy_sets):
     return pd.DataFrame(data, columns=['EnemySet', 'Algorithm', 'Gain']) #return dataframe
 
 
-def gather_num_beaten_data(num_beaten_base_folder, algorithms, enemy_sets):
-    data = []
-
-    for algo in algorithms:
-        for enemy_set in enemy_sets:
-            file_path = os.path.join(num_beaten_base_folder[algo], f"enemy_{enemy_set}_results.json")
-            if os.path.exists(file_path):
-                with open(file_path, 'r') as f:
-                    results = json.load(f)
-                    for run_key, beaten_list in results.items():
-                        num_beaten = sum(beaten_list)
-                        data.append([enemy_set, algo, num_beaten])
-            else:
-                print(f"File not found: {file_path}")
-
-    return pd.DataFrame(data, columns=['EnemySet', 'Algorithm', 'NumBeaten'])
-
-
 def generate_boxplots(df, legend_labels=None):  #CHANGED: Removed p_values and enemies parameters, adjusted to new format
-    plt.figure(figsize=(10, 6))  #UNCHANGED
+    plt.figure(figsize=(10, 6))  
 
     # Map the enemy set values to shorter labels
     enemy_set_mapping = {
@@ -102,18 +79,18 @@ def generate_boxplots(df, legend_labels=None):  #CHANGED: Removed p_values and e
     ax = sns.boxplot(x='Algorithm_EnemySet', y='Gain', data=df, palette=palette, width=0.6)  #CHANGED: Updated x-axis to be Algorithm_EnemySet
 
     # remove and right axes spines (open the top and right side of the plot)
-    sns.despine(ax=ax, top=True, right=True)  #UNCHANGED
+    sns.despine(ax=ax, top=True, right=True)  
 
     # set the labels
     ax.set_xlabel('Evolutionary Algorithms', fontsize=16, labelpad=20)  #CHANGED: Updated x-axis label
-    ax.set_ylabel('Gain', fontsize=16)  #UNCHANGED
+    ax.set_ylabel('Gain', fontsize=16)  
 
     # Set custom legend labels if provided
-    if legend_labels is not None:  #UNCHANGED
-        handles, _ = ax.get_legend_handles_labels()  #UNCHANGED
-        ax.legend(handles, legend_labels, loc='lower right', fontsize=14)  #UNCHANGED
-    else:  #UNCHANGED
-        ax.legend(loc='lower right', fontsize=14)  #UNCHANGED
+    if legend_labels is not None:  
+        handles, _ = ax.get_legend_handles_labels()  
+        ax.legend(handles, legend_labels, loc='lower right', fontsize=14)  
+    else:  
+        ax.legend(loc='lower right', fontsize=14)  
 
         # Add a custom legend for the enemy sets
     #custom_legend = [
@@ -124,45 +101,9 @@ def generate_boxplots(df, legend_labels=None):  #CHANGED: Removed p_values and e
     plt.tick_params(axis='both', which='major', labelsize=14)
 
 
-    plt.tight_layout()  #UNCHANGED
-    plt.savefig('box_plot.png')  # Uncomment to save the figure  #UNCHANGED
-    plt.show()  #UNCHANGED
-
-
-def generate_violinplot_num_beaten(df):
-    plt.figure(figsize=(10, 6))
-
-    enemy_set_mapping = {
-        '2578': '1',
-        '123578': '2'
-    }
-
-    df['EnemySet'] = df['EnemySet'].replace(enemy_set_mapping)
-
-    df['Algorithm_EnemySet'] = df['Algorithm'].replace({
-        'EA1': 'Baseline EA',
-        'EA2': 'Neat'
-    }) + ' (set ' + df['EnemySet'] + ')'
-
-    palette = {
-        "Baseline EA (set 1)": "lightgreen",
-        "Neat (set 1)": "lightgreen",
-        "Baseline EA (set 2)": "lightblue",
-        "Neat (set 2)": "lightblue"
-    }
-
-    ax = sns.violinplot(x='Algorithm_EnemySet', y='NumBeaten', data=df, palette=palette, inner='quartile', width=0.6)
-
-    sns.despine(ax=ax, top=True, right=True)
-
-    ax.set_xlabel('Evolutionary Algorithms', fontsize=16, labelpad=20)
-    ax.set_ylabel('Number of Enemies Beaten', fontsize=16)
-
-    plt.tick_params(axis='both', which='major', labelsize=14)
-
-    plt.tight_layout()
-    plt.savefig('violin_plot_num_beaten.png')
-    plt.show()
+    plt.tight_layout()  
+    plt.savefig('box_plot.png')  # Uncomment to save the figure  
+    plt.show()  
 
 
 def perform_statistical_tests(df, enemy_sets, algorithms):
@@ -210,7 +151,6 @@ if __name__ == "__main__":
 
     #step 1: Gather data from JSON files
     df = gather_data(base_folder, ALGORITHMS, enemy_sets)
-    df_num_beaten = gather_num_beaten_data(num_beaten_base_folder, ALGORITHMS, enemy_sets)
 
     #step 2: Perform statistical tests to compare the algorithms
     p_values = perform_statistical_tests(df, enemy_sets, ALGORITHMS)
@@ -222,7 +162,5 @@ if __name__ == "__main__":
     #generate_boxplots(df, p_values, enemy_sets, custom_legend_labels)
     generate_boxplots(df, custom_legend_labels) 
 
-    # Step 5: Generate violin plots for the number of enemies beaten
-    generate_violinplot_num_beaten(df_num_beaten)
 
 

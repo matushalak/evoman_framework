@@ -1,5 +1,6 @@
 ###############
-# @matushalak
+# Authors: Matus Halak, Rick Geling, Rens Koppelman, Isis van Loenen
+# matus.halak@gmail.com, rickgeling@gmail.com   
 # code adapted from NEAT-python package, XOr & OpenAI-Lander examples
 # eg. https://github.com/CodeReclaimers/neat-python/blob/master/examples/xor/evolve-feedforward-parallel.py
 ###############
